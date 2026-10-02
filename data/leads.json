@@ -1,0 +1,91 @@
+[
+  {
+    "id": "lead_1790968060951",
+    "agentId": "agent_digital_agency",
+    "agentName": "Alex - Agency Growth Consultant",
+    "serviceName": "Web Development & AI Voice Solutions",
+    "customerName": "Farhan Ahmed",
+    "customerEmail": "farhan@example.com",
+    "customerPhone": "+92 300 1234567",
+    "budget": ",500",
+    "preferredTime": "Friday 3 PM",
+    "notes": "Needs AI agent for e-commerce store",
+    "status": "Qualified",
+    "summary": "Customer Farhan Ahmed engaged with Alex - Agency Growth Consultant for Web Development & AI Voice Solutions. Exchanged 3 voice messages and submitted their contact information for follow up.",
+    "transcript": [
+      {
+        "role": "agent",
+        "text": "Hi there!",
+        "timestamp": "10:00"
+      },
+      {
+        "role": "customer",
+        "text": "Hi, how much is pricing?",
+        "timestamp": "10:01"
+      },
+      {
+        "role": "agent",
+        "text": "Starter is .",
+        "timestamp": "10:02"
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "admin@yourdomain.com, sales@apexagency.com, farhan@example.com (Ethereal Preview)",
+    "createdAt": "2026-10-02T19:07:40.951Z",
+    "emailPreviewUrl": "https://ethereal.email/message/asAA.QLEqXPhgcB5asABAcAYPlgYh3vMAAAAAaW29r0-6gxjuiEdGUATZA8"
+  },
+  {
+    "id": "lead_1001",
+    "agentId": "agent_digital_agency",
+    "agentName": "Alex - Agency Growth Consultant",
+    "serviceName": "Web Development & AI Voice Solutions",
+    "customerName": "Tariq Mahmood",
+    "customerEmail": "tariq.mahmood@example.com",
+    "customerPhone": "+92 300 8765432",
+    "budget": "$1,500 - $3,000",
+    "preferredTime": "Tomorrow at 4:00 PM PKT",
+    "notes": "Client needs an AI voice assistant for his dental clinic website to answer appointments 24/7.",
+    "status": "Qualified",
+    "summary": "Prospective client operates a 3-branch dental clinic. Seeking 24/7 automated voice answering on footer of his website to book appointments directly into Google Calendar. High purchase intent.",
+    "transcript": [
+      {
+        "role": "agent",
+        "text": "Hi there! I am Alex from Apex Digital. We build high-converting websites and AI voice agents that 3x sales. Are you looking to build a new website or automate your lead calls?",
+        "timestamp": "14:20:01"
+      },
+      {
+        "role": "customer",
+        "text": "Hello, we run a dental clinic with 3 branches and we miss a lot of patient calls after 6 PM. We need an AI agent for our website.",
+        "timestamp": "14:20:15"
+      },
+      {
+        "role": "agent",
+        "text": "That is exactly what we specialize in! Our voice agent sits in the footer of your website and answers patient inquiries, checks available slots, and books appointments 24/7. What monthly patient inquiry volume are you handling right now?",
+        "timestamp": "14:20:25"
+      },
+      {
+        "role": "customer",
+        "text": "Around 400 to 500 inquiries a month. Our budget is around $1500 to $2500.",
+        "timestamp": "14:20:41"
+      },
+      {
+        "role": "agent",
+        "text": "That budget fits our Growth Package perfectly. It includes multi-location calendar routing and instant SMS/email confirmations. Would tomorrow at 4 PM work for a 15-minute live screen demo?",
+        "timestamp": "14:20:53"
+      },
+      {
+        "role": "customer",
+        "text": "Yes, tomorrow at 4 PM is great. My name is Tariq Mahmood, email is tariq.mahmood@example.com and phone is +92 300 8765432.",
+        "timestamp": "14:21:18"
+      },
+      {
+        "role": "agent",
+        "text": "Thank you Tariq! Your consultation is locked in. I've sent the complete transcript and requirements summary to our team and your inbox.",
+        "timestamp": "14:21:28"
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "sales@apexagency.com, tariq.mahmood@example.com",
+    "createdAt": "2026-10-02T14:21:30.000Z"
+  }
+]

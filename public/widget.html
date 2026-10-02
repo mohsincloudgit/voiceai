@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI Voice Sales Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/widget.css">
+</head>
+<body>
+  <div class="widget-container" id="widgetRoot">
+    <!-- Glowing Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- Header -->
+    <header class="widget-header">
+      <div class="agent-profile">
+        <div class="avatar-wrapper">
+          <img id="agentAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Agent Avatar" class="agent-avatar">
+          <span class="status-dot"></span>
+        </div>
+        <div class="agent-info">
+          <h4 id="agentName">Alex - AI Consultant</h4>
+          <div class="service-tag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span id="agentService">Sales Specialist</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Sound/Mute Toggle -->
+        <button id="muteBtn" class="icon-btn" title="Mute/Unmute Speech">
+          <svg id="soundOnIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <svg id="soundOffIcon" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+        </button>
+        <!-- Close / Minimize Modal Button -->
+        <button id="closeWidgetBtn" class="icon-btn" title="Minimize Widget">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="view-tabs">
+      <button class="tab-btn active" id="tabVoiceBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+        Live Voice
+      </button>
+      <button class="tab-btn" id="tabChatBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Transcript (<span id="transcriptCount">0</span>)
+      </button>
+    </nav>
+
+    <!-- Body Area -->
+    <main class="widget-body">
+      <!-- 1. Voice Visualizer View -->
+      <section class="voice-view" id="voiceView">
+        <!-- Status Pill -->
+        <div class="status-pill" id="statusPill">
+          <span class="status-indicator-dot"></span>
+          <span id="statusLabel">Ready to Talk</span>
+        </div>
+
+        <!-- Hypnotic Visualizer Sphere Stage -->
+        <div class="visualizer-stage" id="visualizerStage">
+          <div class="wave-ring wave-ring-1"></div>
+          <div class="wave-ring wave-ring-2"></div>
+          <div class="wave-ring wave-ring-3"></div>
+          <div class="sphere-core">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Live Subtitle Box -->
+        <div class="live-subtitle-box" id="liveSubtitleBox">
+          <div class="live-speaker-label">
+            <span id="liveSpeaker">AI Agent</span>
+            <span style="font-weight:400; opacity:0.6;" id="liveTime">Just now</span>
+          </div>
+          <div id="liveSubtitleText">
+            "Hi there! Tap the microphone below to start talking, or ask me any question about our services."
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Chat / Transcript History View -->
+      <section class="chat-view" id="chatView">
+        <!-- Chat bubbles appended dynamically -->
+      </section>
+
+      <!-- 3. Lead Confirmation & Form Slide-in Drawer -->
+      <div class="confirmation-card" id="confirmationCard">
+        <div class="card-header">
+          <h5>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Confirm & Send Convo to Email
+          </h5>
+          <button id="closeConfirmCardBtn" class="icon-btn" style="width:24px; height:24px;">&times;</button>
+        </div>
+
+        <form id="leadSubmissionForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Your Full Name *</label>
+              <input type="text" id="leadName" class="form-input" placeholder="e.g. Tariq Khan" required>
+            </div>
+            <div class="form-group">
+              <label>Phone / WhatsApp *</label>
+              <input type="tel" id="leadPhone" class="form-input" placeholder="+92 300 1234567" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Email Address (to receive transcript & quotes) *</label>
+            <input type="email" id="leadEmail" class="form-input" placeholder="name@company.com" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estimated Budget / Requirement</label>
+              <input type="text" id="leadBudget" class="form-input" placeholder="e.g. $1,000 - $3,000">
+            </div>
+            <div class="form-group">
+              <label>Preferred Time Slot</label>
+              <input type="text" id="leadTime" class="form-input" placeholder="e.g. Tomorrow 4 PM">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Specific Questions / Notes</label>
+            <input type="text" id="leadNotes" class="form-input" placeholder="Any specific requirements...">
+          </div>
+
+          <button type="submit" class="submit-lead-btn" id="submitLeadBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            Confirm & Email Complete Details
+          </button>
+        </form>
+
+        <div class="success-banner" id="successBanner">
+          🎉 <strong>Details Confirmed!</strong> Full transcript and sales blueprint dispatched to your email.
+        </div>
+      </div>
+    </main>
+
+    <!-- Optional Fallback Text Drawer -->
+    <div class="text-drawer" id="textDrawer">
+      <input type="text" id="textInput" class="text-input" placeholder="Type your question or message...">
+      <button id="sendTextBtn" class="send-msg-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+
+    <!-- Footer Controls -->
+    <footer class="widget-footer">
+      <!-- Toggle Form / Confirmation -->
+      <button class="footer-btn" id="openFormBtn" title="Review or edit lead details">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Confirm Form
+      </button>
+
+      <!-- Center Big Mic Toggle -->
+      <button class="mic-toggle-btn" id="micToggleBtn" aria-label="Toggle Microphone">
+        <svg id="micIcon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </button>
+
+      <!-- Keyboard / Type Toggle -->
+      <button class="footer-btn" id="toggleKeyboardBtn" title="Type instead of voice">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8"></line><line x1="10" y1="8" x2="10" y2="8"></line><line x1="14" y1="8" x2="14" y2="8"></line><line x1="18" y1="8" x2="18" y2="8"></line><line x1="6" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="18" y2="12"></line><line x1="10" y1="16" x2="14" y2="16"></line></svg>
+        Type
+      </button>
+    </footer>
+  </div>
+
+  <script src="/js/widget.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "geminiApiKey": "",
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpSecure": false,
+  "smtpUser": "",
+  "smtpPass": "",
+  "notificationEmail": "admin@yourdomain.com",
+  "emailFromName": "AI Voice Agent CRM",
+  "sendCustomerCopy": true,
+  "appUrl": "http://localhost:3000"
+}

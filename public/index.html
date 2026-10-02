@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Voice Agent CRM & Knowledge Base Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="crm-sidebar">
+    <div class="brand-section">
+      <div class="brand-logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h2>Voice Agent CRM</h2>
+        <span>Knowledge & Sales Engine</span>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <a class="nav-item active" data-tab="overview">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span>Overview</span>
+      </a>
+
+      <a class="nav-item" data-tab="agents">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Voice Agents & KB</span>
+        <span class="nav-badge" id="sidebarAgentCount">3</span>
+      </a>
+
+      <a class="nav-item" data-tab="leads">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span>Leads & Transcripts</span>
+        <span class="nav-badge" id="sidebarLeadCount">1</span>
+      </a>
+
+      <a class="nav-item" data-tab="embed">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        <span>Iframe & Footer Embed</span>
+      </a>
+
+      <a class="nav-item" data-tab="settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>SMTP & Email Config</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="/demo" target="_blank" class="demo-site-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Live Footer Demo Website</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main View -->
+  <main class="crm-main">
+    <header class="crm-header">
+      <div class="crm-title">
+        <h1 id="pageHeading">Overview Dashboard</h1>
+        <p id="pageSubheading">Manage custom service voice agents, knowledge bases, and incoming leads</p>
+      </div>
+      <div class="header-btn-group">
+        <button id="openNewAgentModalBtn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          New Voice Agent
+        </button>
+        <a id="previewCurrentAgentBtn" href="/widget/agent_digital_agency" target="_blank" class="btn btn-outline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Live Widget Preview
+        </a>
+      </div>
+    </header>
+
+    <!-- SECTION 1: OVERVIEW -->
+    <section id="tab-overview" class="tab-content-section active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon-box icon-purple">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+          </div>
+          <div class="metric-data">
+            <h3 id="statTotalAgents">3</h3>
+            <p>Active Voice Agents</p>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box icon-green">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+          </div>
+          <div class="metric-data">
+            <h3 id="statTotalLeads">1</h3>
+            <p>Captured Leads</p>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box icon-orange">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          </div>
+          <div class="metric-data">
+            <h3 id="statEmailsSent">1</h3>
+            <p>Transcripts Emailed</p>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon-box icon-blue">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          </div>
+          <div class="metric-data">
+            <h3 id="statConversion">100%</h3>
+            <p>Qualification Rate</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Leads Quick Table -->
+      <div class="section-header">
+        <h2>Recent Voice Inquiries & Full Convo Logs</h2>
+        <button class="btn btn-outline btn-sm" onclick="switchTab('leads')">View All Leads &rarr;</button>
+      </div>
+      <div class="table-card">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Contact Info</th>
+              <th>Budget</th>
+              <th>Email Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="overviewLeadsTableBody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 2: VOICE AGENTS & KNOWLEDGE BASE -->
+    <section id="tab-agents" class="tab-content-section">
+      <div class="section-header">
+        <div>
+          <h2>Custom Voice Agents & Knowledge Bases</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Each agent sells a specific service, asks targeted qualification questions, handles objections, and gathers confirmation details.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAgentModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Create New Agent
+        </button>
+      </div>
+
+      <div class="agents-grid" id="agentsListContainer">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- SECTION 3: LEADS & TRANSCRIPTS -->
+    <section id="tab-leads" class="tab-content-section">
+      <div class="section-header">
+        <div>
+          <h2>Captured Leads & Audio Transcripts</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Every conversation, qualification answer, and customer detail is automatically logged and emailed.</p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="leadsSearchInput" class="search-input" placeholder="Search by name, email, service...">
+          </div>
+          <div>
+            <select id="leadStatusFilter" class="form-control" style="width: auto; padding: 7px 12px; font-size: 13px;">
+              <option value="ALL">All Statuses</option>
+              <option value="Qualified">Qualified</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Voice Agent & Service</th>
+              <th>Contact Details</th>
+              <th>Budget / Requirement</th>
+              <th>Status</th>
+              <th>Email Dispatched</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fullLeadsTableBody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 4: EMBED CODE GENERATOR (IFRAME & FOOTER SCRIPT) -->
+    <section id="tab-embed" class="tab-content-section">
+      <div class="section-header">
+        <div>
+          <h2>Iframe & Footer Embed Code Generator</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Paste this iframe or script tag into the footer of ANY website (WordPress, Shopify, Webflow, custom HTML) to enable your Voice Agent!</p>
+        </div>
+      </div>
+
+      <div class="embed-layout">
+        <!-- Left: Code Snippets -->
+        <div class="embed-panel">
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label>Select Agent to Embed:</label>
+            <select id="embedAgentSelect" class="form-control">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <!-- 1. Pure Iframe Code -->
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <span class="badge badge-purple">Option 1</span> Pure Iframe Code (Footer or Anywhere)
+          </h4>
+          <p style="font-size: 12px; color: var(--text-muted);">Paste directly inside the footer section of your website:</p>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copySnippet('iframeCodeText')">Copy Iframe</button>
+            <code id="iframeCodeText"></code>
+          </div>
+
+          <!-- 2. Smart Floating Button Script -->
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <span class="badge badge-green">Option 2 (Recommended)</span> Smart Floating Footer Script
+          </h4>
+          <p style="font-size: 12px; color: var(--text-muted);">Paste just before the closing <code>&lt;/body&gt;</code> tag. It creates a floating mic button that opens the voice agent modal:</p>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copySnippet('scriptCodeText')">Copy Script</button>
+            <code id="scriptCodeText"></code>
+          </div>
+
+          <!-- 3. Direct URL -->
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #ffffff;">
+            <span class="badge badge-blue">Option 3</span> Direct URL (Share on WhatsApp, Bio, Email)
+          </h4>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copySnippet('directUrlText')">Copy URL</button>
+            <code id="directUrlText"></code>
+          </div>
+        </div>
+
+        <!-- Right: Interactive Live Preview -->
+        <div class="embed-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 style="font-size: 15px; font-weight: 700; color: #ffffff;">Live Interactive Preview</h4>
+            <a id="openWidgetInNewTab" href="#" target="_blank" class="btn btn-outline btn-sm">Open in New Tab &nearr;</a>
+          </div>
+          <div class="preview-iframe-wrapper">
+            <iframe id="livePreviewIframe" src="/widget/agent_digital_agency" style="width:100%; height:100%; border:none;" allow="microphone; speech-recognition; autoplay"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: SMTP & EMAIL CONFIGURATION -->
+    <section id="tab-settings" class="tab-content-section">
+      <div class="section-header">
+        <div>
+          <h2>Email Notifications & AI Engine Settings</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Configure where conversation transcripts, summaries, and lead form submissions are emailed.</p>
+        </div>
+      </div>
+
+      <div style="max-width: 720px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px;">
+        <form id="settingsForm">
+          <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 14px; color: #ffffff;">📧 SMTP Email Configuration (Nodemailer)</h4>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>SMTP Host</label>
+              <input type="text" id="smtpHost" class="form-control" placeholder="smtp.gmail.com" required>
+            </div>
+            <div class="form-group">
+              <label>SMTP Port</label>
+              <input type="number" id="smtpPort" class="form-control" placeholder="587" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>SMTP Username / Email</label>
+              <input type="text" id="smtpUser" class="form-control" placeholder="your-email@gmail.com">
+            </div>
+            <div class="form-group">
+              <label>SMTP Password / App Password</label>
+              <input type="password" id="smtpPass" class="form-control" placeholder="••••••••">
+              <small style="color:var(--text-muted); font-size:11px;">For Gmail, generate an <strong>App Password</strong> in Google Account Security.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Admin Notification Recipient Email</label>
+              <input type="email" id="notificationEmail" class="form-control" placeholder="admin@yourdomain.com" required>
+            </div>
+            <div class="form-group">
+              <label>Sender Display Name</label>
+              <input type="text" id="emailFromName" class="form-control" placeholder="AI Voice Agent CRM">
+            </div>
+          </div>
+
+          <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+          <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 14px; color: #ffffff;">🤖 Gemini AI Intelligence Engine (Optional)</h4>
+          <div class="form-group">
+            <label>Google Gemini API Key</label>
+            <input type="password" id="geminiApiKey" class="form-control" placeholder="AIzaSy...">
+            <small style="color:var(--text-muted); font-size:11px;">The system works 100% out of the box with the built-in knowledge engine. Add a Gemini key to enable next-level LLM conversational reasoning.</small>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+            <button type="button" class="btn btn-outline" id="testSmtpBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              Send Test Email
+            </button>
+          </div>
+          <div id="settingsFeedback" style="margin-top: 12px; font-size: 13px;"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: AGENT BUILDER & KNOWLEDGE BASE EDITOR -->
+  <div class="modal-overlay" id="agentModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="agentModalTitle">Create Voice Agent & Custom Knowledge Base</h3>
+        <button class="icon-btn" onclick="closeAgentModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="agentEditorForm">
+          <input type="hidden" id="editAgentId">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Agent Name & Persona *</label>
+              <input type="text" id="editAgentName" class="form-control" placeholder="e.g. Alex - Growth Specialist" required>
+            </div>
+            <div class="form-group">
+              <label>Service Being Sold *</label>
+              <input type="text" id="editAgentService" class="form-control" placeholder="e.g. Web Development & SEO" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Agent Avatar Photo URL</label>
+              <input type="url" id="editAgentAvatar" class="form-control" placeholder="https://...">
+            </div>
+            <div class="form-group">
+              <label>Brand Theme Color</label>
+              <input type="color" id="editAgentColor" class="form-control" value="#6366f1" style="height: 42px; padding: 4px;">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Dedicated Notification Email for Leads</label>
+            <input type="email" id="editAgentEmail" class="form-control" placeholder="leads-service@yourcompany.com">
+          </div>
+
+          <div class="form-group">
+            <label>Spoken Welcome Greeting *</label>
+            <textarea id="editAgentWelcome" class="form-control" rows="2" placeholder="Hi there! I am Alex. How can I help you today?" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Voice Tone & Persona Style</label>
+            <input type="text" id="editAgentPitch" class="form-control" placeholder="Consultative, polite, confident, concise answers">
+          </div>
+
+          <!-- Dynamic Knowledge Base Entries -->
+          <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin: 10px 0; background: rgba(0,0,0,0.2);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+              <label style="font-weight:700; color:#ffffff; font-size:13px;">📚 Custom Service Knowledge Base (Q&A / Packages / Pricing)</label>
+              <button type="button" class="btn btn-outline btn-sm" onclick="addKbItem()">+ Add Knowledge Item</button>
+            </div>
+            <div id="kbItemsContainer" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Dynamic KB rows -->
+            </div>
+          </div>
+
+          <!-- Qualification Questions -->
+          <div class="form-group">
+            <label>Sales Qualification Questions (One per line)</label>
+            <textarea id="editAgentQuestions" class="form-control" rows="3" placeholder="What is your current requirement?&#10;What is your budget range?&#10;When do you want to start?"></textarea>
+          </div>
+
+          <!-- Confirmation Closing Flow -->
+          <div class="form-group">
+            <label>Closing / Confirmation Message</label>
+            <textarea id="editAgentClosing" class="form-control" rows="2" placeholder="I can lock in your booking! What is your name, phone, and email to confirm?"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeAgentModal()">Cancel</button>
+        <button class="btn btn-primary" id="saveAgentBtn" onclick="submitAgentForm()">Save Agent & Knowledge Base</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LEAD DETAIL & FULL CONVERSATION TRANSCRIPT -->
+  <div class="modal-overlay" id="leadDetailModal">
+    <div class="modal-container" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3 id="leadModalTitle">Lead Details & Complete Conversation</h3>
+        <button class="icon-btn" onclick="closeLeadModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="leadModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeLeadModal()">Close</button>
+        <button class="btn btn-primary" id="resendLeadEmailBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          Resend Notification Email
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
