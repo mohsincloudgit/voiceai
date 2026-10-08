@@ -114,6 +114,43 @@ NOTIFICATION_EMAIL=admin_leads@yourcompany.com
 
 ---
 
+## 🔥 Firebase Firestore & Cloud Database Integration
+
+The system uses a **pluggable Database Provider Architecture** (`lib/database/`):
+- **Primary Database**: Google Cloud Firestore (Firebase)
+- **Fallback / Offline Database**: Local JSON files (`data/agents.json`, `data/leads.json`, `data/settings.json`)
+- **Future Ready**: Prepared for seamless **AWS DynamoDB / DocumentDB** migration with zero API or UI changes.
+
+### 1. Connect Firebase Firestore:
+Add your credentials to `.env` using either method:
+- **Option A (Recommended)**: Download your Service Account private key JSON from Firebase Console (*Project Settings -> Service accounts -> Generate new private key*), save as `serviceAccountKey.json`, and set:
+  ```env
+  DB_PROVIDER=firebase
+  FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+  ```
+- **Option B**: Set individual environment variables:
+  ```env
+  DB_PROVIDER=firebase
+  FIREBASE_PROJECT_ID=your-project-id
+  FIREBASE_CLIENT_EMAIL=your-adminsdk-email@your-project-id.iam.gserviceaccount.com
+  FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+  ```
+
+### 2. Migrate Local Data to Firebase:
+To upload all existing local agents, leads, and settings from `data/` directly into your Firestore database, run:
+```bash
+npm run migrate:firebase
+```
+
+### 3. Future AWS Migration:
+When you are ready to migrate to AWS:
+1. Set `DB_PROVIDER=aws` in `.env`.
+2. Configure AWS credentials (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
+3. Connect DynamoDB tables in `lib/database/awsProvider.js`. No changes needed in API routes or widgets!
+
+
+---
+
 ## 🤖 Customizing Knowledge Base for Different Services
 
 1. In the CRM Dashboard, navigate to **"Voice Agents & KB"**.

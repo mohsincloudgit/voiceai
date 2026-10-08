@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { AGENTS_FILE, LEADS_FILE, SETTINGS_FILE, readJson, writeJson } from '@/lib/db';
+import { getAgents, getSettings, getLeads, saveLead } from '@/lib/db';
 import { getEmailTransporter, generateLeadEmailHtml } from '@/lib/email';
 import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request) {
   try {
     const { agentId, message, conversationHistory = [] } = await request.json();
-    const agents = readJson(AGENTS_FILE, []);
-    const settings = readJson(SETTINGS_FILE, {});
+    const agents = await getAgents();
+    const settings = await getSettings();
     const agent = agents.find(a => a.id === agentId) || agents[0];
 
     if (!agent) {
@@ -219,7 +219,7 @@ ${kbText || 'High quality professional services tailored to customer goals.'}
 
     if (detectedBookingConfirmed && (detectedEmail || detectedPhone)) {
       try {
-        const leads = readJson(LEADS_FILE, []);
+        const leads = await getLeads();
         const existingIndex = leads.findIndex(l =>
           (detectedEmail && l.customerEmail === detectedEmail) ||
           (detectedPhone && l.customerPhone === detectedPhone)
@@ -277,13 +277,8 @@ ${kbText || 'High quality professional services tailored to customer goals.'}
           }
         }
 
-        if (existingIndex >= 0) {
-          leads[existingIndex] = bookedLead;
-        } else {
-          leads.unshift(bookedLead);
-        }
-        writeJson(LEADS_FILE, leads);
-        bookedLeadId = bookedLead.id;
+        const savedLead = await saveLead(bookedLead);
+        bookedLeadId = savedLead.id;
       } catch (leadSaveErr) {
         console.error('Failed to auto-save booked lead:', leadSaveErr);
       }

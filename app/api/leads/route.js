@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { AGENTS_FILE, LEADS_FILE, SETTINGS_FILE, readJson, writeJson } from '@/lib/db';
+import { getAgents, getLeads, saveLead, getSettings } from '@/lib/db';
 import { getEmailTransporter, generateLeadEmailHtml } from '@/lib/email';
 
 export async function GET() {
-  const leads = readJson(LEADS_FILE, []);
-  return NextResponse.json({ success: true, leads });
+  try {
+    const leads = await getLeads();
+    return NextResponse.json({ success: true, leads });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
 }
 
 export async function POST(request) {
@@ -23,9 +27,8 @@ export async function POST(request) {
       summary
     } = body;
 
-    const agents = readJson(AGENTS_FILE, []);
-    const settings = readJson(SETTINGS_FILE, {});
-    const leads = readJson(LEADS_FILE, []);
+    const agents = await getAgents();
+    const settings = await getSettings();
 
     const agent = agents.find(a => a.id === agentId) || {
       name: 'AI Sales Assistant',
@@ -126,12 +129,11 @@ export async function POST(request) {
       emailStatus = 'failed: ' + mailErr.message;
     }
 
-    leads.unshift(newLead);
-    writeJson(LEADS_FILE, leads);
+    const savedLead = await saveLead(newLead);
 
     return NextResponse.json({
       success: true,
-      lead: newLead,
+      lead: savedLead,
       emailStatus,
       emailPreviewUrl
     });

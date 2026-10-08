@@ -1,8 +1,14 @@
 # Dependencies
 node_modules/
 
-# Environment Variables
+# Environment Variables & Secrets
 .env
+serviceAccountKey*.json
+*firebase*.json
+*.pem
+
+# Archives
+*.zip
 
 # Logs
 *.log

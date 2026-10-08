@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { SETTINGS_FILE, readJson } from '@/lib/db';
+import { getSettings } from '@/lib/db';
 import { getEmailTransporter } from '@/lib/email';
 
 export async function POST(request) {
   try {
-    const settings = readJson(SETTINGS_FILE, {});
+    const settings = await getSettings();
     const body = await request.json().catch(() => ({}));
     const targetEmail = body.email || settings.notificationEmail || process.env.NOTIFICATION_EMAIL;
 
@@ -16,7 +16,7 @@ export async function POST(request) {
     if (!transporter) {
       return NextResponse.json({
         success: false,
-        error: 'SMTP user and password are required. Please configure them in Settings.'
+        error: 'SMTP user and password are required. Please configure them in Settings or .env.'
       }, { status: 400 });
     }
 

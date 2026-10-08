@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server';
-import { SETTINGS_FILE, readJson, writeJson } from '@/lib/db';
+import { getSettings, saveSettings, getDatabaseStatus } from '@/lib/db';
 
 export async function GET() {
-  const fileSettings = readJson(SETTINGS_FILE, {});
-  const host = fileSettings.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = fileSettings.smtpPort || parseInt(process.env.SMTP_PORT || '587', 10);
-  const secure = fileSettings.smtpSecure !== undefined ? fileSettings.smtpSecure : (process.env.SMTP_SECURE === 'true');
-  const user = fileSettings.smtpUser || process.env.SMTP_USER || '';
-  const pass = fileSettings.smtpPass || process.env.SMTP_PASS || '';
-  const notifEmail = fileSettings.notificationEmail || process.env.NOTIFICATION_EMAIL || '';
-  const geminiKey = fileSettings.geminiApiKey || process.env.GEMINI_API_KEY || '';
+  const currentSettings = await getSettings();
+  const host = currentSettings.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = currentSettings.smtpPort || parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure = currentSettings.smtpSecure !== undefined ? currentSettings.smtpSecure : (process.env.SMTP_SECURE === 'true');
+  const user = currentSettings.smtpUser || process.env.SMTP_USER || '';
+  const pass = currentSettings.smtpPass || process.env.SMTP_PASS || '';
+  const notifEmail = currentSettings.notificationEmail || process.env.NOTIFICATION_EMAIL || '';
+  const geminiKey = currentSettings.geminiApiKey || process.env.GEMINI_API_KEY || '';
+
+  const dbStatus = getDatabaseStatus();
 
   const safeSettings = {
-    ...fileSettings,
+    ...currentSettings,
     smtpHost: host,
     smtpPort: port,
     smtpSecure: secure,
@@ -21,27 +23,28 @@ export async function GET() {
     notificationEmail: notifEmail,
     geminiApiKey: geminiKey ? `${geminiKey.slice(0, 6)}...` : '',
     isSmtpConfigured: !!(user && pass),
-    isGeminiConfigured: !!geminiKey
+    isGeminiConfigured: !!geminiKey,
+    dbStatus
   };
   return NextResponse.json({ success: true, settings: safeSettings });
 }
 
 export async function POST(request) {
   try {
-    const currentSettings = readJson(SETTINGS_FILE, {});
+    const currentSettings = await getSettings();
     const newSettings = await request.json();
 
     if (newSettings.smtpPass === '••••••••') {
-      newSettings.smtpPass = currentSettings.smtpPass;
+      newSettings.smtpPass = currentSettings.smtpPass || process.env.SMTP_PASS || '';
     }
     if (newSettings.geminiApiKey && newSettings.geminiApiKey.includes('...')) {
-      newSettings.geminiApiKey = currentSettings.geminiApiKey;
+      newSettings.geminiApiKey = currentSettings.geminiApiKey || process.env.GEMINI_API_KEY || '';
     }
 
     const merged = { ...currentSettings, ...newSettings };
-    writeJson(SETTINGS_FILE, merged);
+    const saved = await saveSettings(merged);
 
-    return NextResponse.json({ success: true, message: 'Settings saved successfully' });
+    return NextResponse.json({ success: true, message: 'Settings saved successfully', settings: saved });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

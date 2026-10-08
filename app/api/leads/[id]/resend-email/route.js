@@ -1,22 +1,21 @@
 import { NextResponse } from 'next/server';
-import { AGENTS_FILE, LEADS_FILE, SETTINGS_FILE, readJson } from '@/lib/db';
+import { getLeadById, getAgentById, getSettings } from '@/lib/db';
 import { getEmailTransporter, generateLeadEmailHtml } from '@/lib/email';
 
 export async function POST(request, context) {
   try {
     const { id } = await context.params;
     const body = await request.json().catch(() => ({}));
-    const leads = readJson(LEADS_FILE, []);
-    const agents = readJson(AGENTS_FILE, []);
-    const settings = readJson(SETTINGS_FILE, {});
 
-    const lead = leads.find(l => l.id === id);
+    const lead = await getLeadById(id);
     if (!lead) {
       return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
     }
 
-    const agent = agents.find(a => a.id === lead.agentId);
-    const toEmail = body.recipient || settings.notificationEmail || agent?.notificationEmail;
+    const agent = await getAgentById(lead.agentId);
+    const settings = await getSettings();
+
+    const toEmail = body.recipient || settings.notificationEmail || agent?.notificationEmail || process.env.NOTIFICATION_EMAIL;
 
     if (!toEmail) {
       return NextResponse.json({ success: false, error: 'No recipient email specified' }, { status: 400 });
@@ -26,12 +25,13 @@ export async function POST(request, context) {
     if (!transporter) {
       return NextResponse.json({
         success: false,
-        error: 'SMTP settings not configured. Please configure in CRM Settings.'
+        error: 'SMTP settings not configured. Please configure in CRM Settings or .env.'
       }, { status: 400 });
     }
 
+    const fromEmail = settings.smtpUser || process.env.SMTP_USER;
     await transporter.sendMail({
-      from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${settings.smtpUser}>`,
+      from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${fromEmail}>`,
       to: toEmail,
       subject: `[Resent] 🎙️ Lead Transcript: ${lead.customerName} - ${lead.serviceName}`,
       html: generateLeadEmailHtml(lead, agent)
