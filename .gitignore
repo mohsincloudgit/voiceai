@@ -11,6 +11,10 @@ yarn-debug.log*
 yarn-error.log*
 grok_logs.csv
 
+# Next.js build output
+.next/
+out/
+
 # OS metadata
 .DS_Store
 Thumbs.db

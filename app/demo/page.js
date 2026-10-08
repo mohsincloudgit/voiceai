@@ -1,0 +1,220 @@
+'use client';
+
+import React from 'react';
+import Script from 'next/script';
+import Link from 'next/link';
+
+export default function DemoPage() {
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: #0f172a;
+          color: #f8fafc;
+          line-height: 1.6;
+        }
+        .demo-header {
+          padding: 20px 40px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          background: rgba(15, 23, 42, 0.8);
+          backdrop-filter: blur(10px);
+          position: sticky;
+          top: 0;
+          z-index: 100;
+        }
+        .demo-logo {
+          font-size: 20px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #6366f1, #a855f7);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .demo-nav a {
+          color: #94a3b8;
+          text-decoration: none;
+          margin-left: 24px;
+          font-size: 14px;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+        .demo-nav a:hover { color: #fff; }
+        .demo-hero {
+          padding: 100px 40px;
+          text-align: center;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        .demo-badge {
+          display: inline-block;
+          padding: 6px 16px;
+          border-radius: 20px;
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          color: #818cf8;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 20px;
+        }
+        .demo-hero h1 {
+          font-size: 54px;
+          font-weight: 800;
+          letter-spacing: -1.5px;
+          line-height: 1.15;
+          margin-bottom: 24px;
+        }
+        .demo-hero h1 span {
+          background: linear-gradient(135deg, #818cf8, #c084fc);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .demo-hero p {
+          font-size: 18px;
+          color: #94a3b8;
+          max-width: 650px;
+          margin: 0 auto 36px;
+        }
+        .demo-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+          max-width: 1100px;
+          margin: 40px auto 100px;
+          padding: 0 20px;
+        }
+        .demo-card {
+          background: rgba(30, 41, 59, 0.5);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+          padding: 28px;
+          transition: transform 0.2s, border-color 0.2s;
+        }
+        .demo-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(99, 102, 241, 0.4);
+        }
+        .demo-card h3 { font-size: 18px; margin-bottom: 10px; color: #fff; }
+        .demo-card p { font-size: 14px; color: #94a3b8; }
+        .embed-banner {
+          background: #090d16;
+          border: 1px dashed rgba(99, 102, 241, 0.4);
+          border-radius: 14px;
+          padding: 24px;
+          max-width: 850px;
+          margin: 0 auto 80px;
+          text-align: left;
+        }
+        .embed-banner h4 {
+          color: #38bdf8;
+          font-size: 15px;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .embed-banner code {
+          display: block;
+          background: #000;
+          color: #a5b4fc;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-family: monospace;
+          font-size: 13px;
+          margin-top: 10px;
+          overflow-x: auto;
+        }
+        .demo-footer {
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding: 40px;
+          text-align: center;
+          color: #64748b;
+          font-size: 13px;
+          background: #090d16;
+        }
+        @media (max-width: 768px) {
+          .demo-hero h1 { font-size: 36px; }
+          .demo-grid { grid-template-columns: 1fr; }
+        }
+      ` }} />
+
+      <header className="demo-header">
+        <div className="demo-logo">Apex Digital</div>
+        <nav className="demo-nav">
+          <Link href="/">CRM Dashboard</Link>
+          <a href="#services">Services</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </header>
+
+      <main>
+        <section className="demo-hero">
+          <div className="demo-badge">✨ Live Website Footer Embed Demonstration</div>
+          <h1>High-Converting Web Apps & <span>AI Voice Agents</span></h1>
+          <p>This is a live example of an external client website. Look at the bottom-right corner: the AI Voice Sales Agent is active and ready to qualify leads!</p>
+          <div>
+            <Link
+              href="/"
+              style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: 'white',
+                padding: '12px 24px',
+                borderRadius: '10px',
+                textDecoration: 'none',
+                fontWeight: 600,
+                boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+              }}
+            >
+              Back to CRM Dashboard &rarr;
+            </Link>
+          </div>
+        </section>
+
+        <div className="embed-banner">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            How this Voice Agent was embedded into this website's footer:
+          </h4>
+          <p style={{ fontSize: '13px', color: '#94a3b8' }}>
+            Only a single line of code was placed right before <code>&lt;/body&gt;</code> in the website footer:
+          </p>
+          <code>&lt;script src="/embed.js" data-agent-id="agent_digital_agency" async&gt;&lt;/script&gt;</code>
+          <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px' }}>
+            💡 You can also use the <strong>pure &lt;iframe&gt;</strong> code provided in the CRM dashboard!
+          </p>
+        </div>
+
+        <section className="demo-grid" id="services">
+          <div className="demo-card">
+            <h3>⚡ 24/7 AI Voice Answering</h3>
+            <p>Never miss a high-ticket customer call. The AI voice agent answers inquiries instantly with zero wait time.</p>
+          </div>
+          <div className="demo-card">
+            <h3>🎯 Custom Knowledge Base</h3>
+            <p>Configured specifically to sell your service packages, prices, turnaround times, and handle common customer objections.</p>
+          </div>
+          <div className="demo-card">
+            <h3>📬 Instant Email Dispatch</h3>
+            <p>Sends full timestamped audio conversation transcripts, customer qualification details, and action items directly to your inbox.</p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="demo-footer">
+        <p>&copy; 2026 Apex Digital Agency &bull; All rights reserved.</p>
+        <p style={{ marginTop: '6px' }}>Voice Assistant Powered by Voice Agent CRM</p>
+      </footer>
+
+      {/* Embed Script */}
+      <Script src="/embed.js" data-agent-id="agent_digital_agency" strategy="afterInteractive" />
+    </>
+  );
+}

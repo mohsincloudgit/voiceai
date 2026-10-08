@@ -46,8 +46,12 @@ cd d:\voice-agent
 # Install dependencies (already completed)
 npm install
 
-# Start the server
-node server.js
+# Start Next.js Development Server
+npm run dev
+
+# Or Build & Start Production
+npm run build
+npm start
 ```
 
 The application will be live at:

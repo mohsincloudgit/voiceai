@@ -1,5 +1,33 @@
 [
   {
+    "id": "lead_1791394672593",
+    "agentId": "agent_digital_agency",
+    "agentName": "Alex - Agency Growth Consultant",
+    "serviceName": "Web Development & AI Voice Solutions",
+    "customerName": "Test User",
+    "customerEmail": "test@example.com",
+    "customerPhone": "+1234567890",
+    "budget": ",000",
+    "preferredTime": "Flexible",
+    "notes": "",
+    "status": "Qualified",
+    "summary": "Customer Test User engaged with Alex - Agency Growth Consultant for Web Development & AI Voice Solutions. Exchanged 2 voice messages and submitted their contact information for follow up.",
+    "transcript": [
+      {
+        "role": "customer",
+        "text": "How much is pricing?"
+      },
+      {
+        "role": "agent",
+        "text": "Starter Web Package is ."
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "admin@yourdomain.com, sales@apexagency.com, test@example.com (Ethereal Preview)",
+    "createdAt": "2026-10-07T17:37:52.593Z",
+    "emailPreviewUrl": "https://ethereal.email/message/asaDb0YSGgV814AHasaDclz99noLdU9KAAAAARIaYjsZ2OuhG45m3dEtvAA"
+  },
+  {
     "id": "lead_1790968060951",
     "agentId": "agent_digital_agency",
     "agentName": "Alex - Agency Growth Consultant",
