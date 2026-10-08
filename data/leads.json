@@ -1,5 +1,201 @@
 [
   {
+    "id": "lead_1791463901999",
+    "agentId": "agent_1791463825030",
+    "agentName": "mohsin",
+    "serviceName": "web development crm and cms",
+    "customerName": "Zuhair",
+    "customerEmail": "msin6301@gmail.com",
+    "customerPhone": "03302893269",
+    "budget": "Confirmed in Consultation",
+    "preferredTime": "Scheduled via Voice Agent",
+    "notes": "Auto-confirmed via AI voice conversational booking flow.",
+    "status": "Booked",
+    "summary": "Appointment confirmed for Zuhair regarding web development crm and cms.",
+    "transcript": [
+      {
+        "role": "customer",
+        "text": "i need a new website ",
+        "timestamp": "17:50"
+      },
+      {
+        "role": "agent",
+        "text": "Hello! Main mohsin hoon. Kya main aapka naam jaan sakta hoon?",
+        "timestamp": "17:50"
+      },
+      {
+        "role": "customer",
+        "text": "zuhair name hei ",
+        "timestamp": "17:50"
+      },
+      {
+        "role": "agent",
+        "text": "Shukriya Zuhair! Aapka email address aur WhatsApp/phone number kya hai taake main tailored details aur appointment confirmation bhej sakoon?",
+        "timestamp": "17:50"
+      },
+      {
+        "role": "customer",
+        "text": "msin6301@gmail.com email hei phone number 03302893269 ",
+        "timestamp": "17:51"
+      },
+      {
+        "role": "agent",
+        "text": "Hum custom web development, CRM, aur CMS solutions provide karte hain jinki standard delivery 10-15 days mein hoti hai. Kya hum aapke project ke liye ek 15-minute consultation appointment book kar dein?",
+        "timestamp": "17:51"
+      },
+      {
+        "role": "customer",
+        "text": "hn book krwa do consultation",
+        "timestamp": "17:51"
+      },
+      {
+        "role": "agent",
+        "text": "Aapki appointment confirm ho gayi hai! Maine complete details aapke email par bhej di hain.",
+        "timestamp": "17:51"
+      },
+      {
+        "role": "customer",
+        "text": "mjhe cms ka batao kn knse cms platforms hein jahan me apne website bana skta hun ",
+        "timestamp": "17:53"
+      },
+      {
+        "role": "agent",
+        "text": "Hum WordPress, Shopify, aur custom CMS platforms par websites banate hain jinki standard delivery 10-15 days mein ho jati hai. Aapki mazeed رہنمائی ke liye, kya main aapke sath ek quick consultation call schedule kar doon?",
+        "timestamp": "17:53"
+      },
+      {
+        "role": "customer",
+        "text": "squarespace pe banwana hei",
+        "timestamp": "17:53"
+      },
+      {
+        "role": "agent",
+        "text": "Ji bilkul, hum Squarespace par bhi aapki professional website design aur develop kar sakte hain jinki standard delivery 10-15 days mein hoti hai. Kya hum is project ke liye ek quick consultation call book kar dein?",
+        "timestamp": "17:53"
+      },
+      {
+        "role": "customer",
+        "text": "sahi hei mjhe squarespace pe banwani hei ",
+        "timestamp": "17:53"
+      },
+      {
+        "role": "agent",
+        "text": "Behtareen! Main aapka Squarespace website project note kar leta hoon aur iski standard delivery 10-15 days mein ho jayegi. Kya aapki yeh appointment confirm samjhein?",
+        "timestamp": "17:54"
+      },
+      {
+        "role": "customer",
+        "text": "hn krdo ",
+        "timestamp": "17:54"
+      },
+      {
+        "role": "customer",
+        "text": "hn krdo ",
+        "timestamp": "05:54 PM"
+      },
+      {
+        "role": "agent",
+        "text": "Aapki Squarespace website ki appointment confirm ho gayi hai! Maine complete details aapke email par bhej di hain.",
+        "timestamp": "05:54 PM"
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "muhammadmohsinghl@gmail.com, msin6301@gmail.com",
+    "createdAt": "2026-10-08T12:54:21.138Z"
+  },
+  {
+    "id": "lead_1791463182560",
+    "agentId": "agent_digital_agency",
+    "agentName": "Alex - Agency Growth Consultant",
+    "serviceName": "Web Development & AI Voice Solutions",
+    "customerName": "Mohsin",
+    "customerEmail": "mohsincloudmail@gmail.com",
+    "customerPhone": "03001234567",
+    "budget": "Confirmed in Consultation",
+    "preferredTime": "Scheduled via Voice Agent",
+    "notes": "Auto-confirmed via AI voice conversational booking flow.",
+    "status": "Booked",
+    "summary": "Appointment confirmed for Mohsin regarding Web Development & AI Voice Solutions.",
+    "transcript": [
+      {
+        "text": "Hello",
+        "role": "customer"
+      },
+      {
+        "text": "Hello! Main Alex - Agency Growth Consultant hoon. Kya main aapka naam jaan sakta hoon?",
+        "role": "agent"
+      },
+      {
+        "text": "Mera naam Mohsin hai",
+        "role": "customer"
+      },
+      {
+        "text": "Shukriya Mohsin! Aapka email address aur WhatsApp/phone number kya hai taake main tailored details aur appointment confirmation bhej sakoon?",
+        "role": "agent"
+      },
+      {
+        "text": "Email mohsincloudmail@gmail.com aur number 03001234567 hai. AI voice agent ki price kitni hai?",
+        "role": "customer"
+      },
+      {
+        "text": "AI Voice Agent integration ki starting price $499 hai. Aapki requirement ke liye hamara yeh package best hai, toh kya hum aapke liye ek 15-minute consultation appointment book kar dein?",
+        "role": "agent"
+      },
+      {
+        "role": "customer",
+        "text": "Theek hai zabardast, kal dopahar 3 baje ki appointment confirm kardo.",
+        "timestamp": "05:39 PM"
+      },
+      {
+        "role": "agent",
+        "text": "Aapki appointment kal dopahar 3 baje ke liye confirm ho gayi hai! Maine complete details aapke email par bhej di hain.",
+        "timestamp": "05:39 PM"
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "muhammadmohsinghl@gmail.com, sales@apexagency.com, mohsincloudmail@gmail.com",
+    "createdAt": "2026-10-08T12:39:42.560Z"
+  },
+  {
+    "id": "lead_1791458439474",
+    "agentId": "agent_digital_agency",
+    "agentName": "Alex - Agency Growth Consultant",
+    "serviceName": "Web Development & AI Voice Solutions",
+    "customerName": "Mohsin Lead Test",
+    "customerEmail": "muhammadmohsinghl@gmail.com",
+    "customerPhone": "+923001234567",
+    "budget": ",500",
+    "preferredTime": "Tomorrow 3:00 PM",
+    "notes": "Interested in AI Voice Agent integration",
+    "status": "Follow Up",
+    "summary": "Customer Mohsin Lead Test engaged with Alex - Agency Growth Consultant for Web Development & AI Voice Solutions. Exchanged 4 voice messages and submitted their contact information for follow up.",
+    "transcript": [
+      {
+        "timestamp": "04:19 PM",
+        "text": "Hi there! How can I help you today?",
+        "role": "agent"
+      },
+      {
+        "timestamp": "04:20 PM",
+        "text": "I want an AI voice agent for my business.",
+        "role": "user"
+      },
+      {
+        "timestamp": "04:20 PM",
+        "text": "We provide custom voice agents starting from ! Would you like to schedule a call?",
+        "role": "agent"
+      },
+      {
+        "timestamp": "04:21 PM",
+        "text": "Yes, please call me tomorrow.",
+        "role": "user"
+      }
+    ],
+    "emailSent": true,
+    "emailSentTo": "muhammadmohsinghl@gmail.com, sales@apexagency.com",
+    "createdAt": "2026-10-08T11:20:39.474Z"
+  },
+  {
     "id": "lead_1791394672593",
     "agentId": "agent_digital_agency",
     "agentName": "Alex - Agency Growth Consultant",

@@ -58,7 +58,8 @@ function getEmailTransporter(settings) {
   const port = parseInt(settings.smtpPort || process.env.SMTP_PORT || '587', 10);
   const secure = settings.smtpSecure || process.env.SMTP_SECURE === 'true' || false;
   const user = settings.smtpUser || process.env.SMTP_USER || '';
-  const pass = settings.smtpPass || process.env.SMTP_PASS || '';
+  const rawPass = settings.smtpPass || process.env.SMTP_PASS || '';
+  const pass = rawPass.replace(/\s+/g, '');
 
   if (!user || !pass) {
     // If SMTP not fully configured, return null for mock / preview mode
@@ -291,29 +292,34 @@ You are "${agent.name}", a professional, friendly, high-converting voice sales r
 Service You Are Selling: ${agent.serviceName}
 Your Persona and Voice Tone: ${agent.voicePitch || 'Helpful, consultative, concise, natural speaking voice.'}
 
-### STRICT VOICE CONVERSATION GUIDELINES:
-1. You are speaking through audio (Text-to-Speech). Keep your answers punchy, natural, conversational, and direct (1 to 3 short sentences per turn). Avoid robotic lists or long bullet points.
-2. Answer the user's questions strictly using your KNOWLEDGE BASE below. If something isn't in your knowledge base, answer courteously and guide them towards booking a tailored consultation.
-3. Your primary sales goal is to qualify the prospect, answer objections gracefully, and collect/confirm their booking details:
-   - Full Name
-   - Phone Number
-   - Email Address
-   - Budget or Timeline
-4. When the user provides contact details or confirms they want the service, warmly thank them and confirm that their request has been logged and the full conversation transcript and details are being sent to their email.
+### CRITICAL CONVERSATION RULES:
+1. ALWAYS ANSWER THE USER'S SPECIFIC QUESTION FIRST:
+   - Listen carefully to what the user actually said or asked (e.g., pricing, what services you provide, turnaround time, who you are).
+   - Answer their question directly and concisely using your KNOWLEDGE BASE.
+   - Never ignore their question. Never randomly jump to an unrelated qualification question without answering them first!
+2. MULTI-LANGUAGE MATCHING (URDU, ROMAN URDU, ENGLISH, HINDI):
+   - Match the language the user speaks or types!
+   - If the user talks in Urdu or Roman Urdu (e.g. "aap kya karte ho", "pricing kitni hai", "kese ho", "kaam batao"), respond naturally in warm Roman Urdu / Urdu!
+   - If the user talks in English, respond in professional English!
+3. NATURAL FOLLOW-UP (ONE QUESTION AT A TIME):
+   - Only AFTER answering their question, smoothly ask ONE natural follow-up question to understand their needs or timeline.
+   - Do NOT ask multiple questions in one go.
+4. AUDIO-READY SPOKEN TEXT:
+   - Your answer will be read aloud via Text-to-Speech audio.
+   - Keep answers concise (1 to 2 spoken sentences).
+   - DO NOT include markdown formatting (no asterisks **, no hash #, no bullet points). Keep it plain, natural speech text.
 
-### CUSTOM KNOWLEDGE BASE:
+### KNOWLEDGE BASE:
 ${kbText || 'High quality professional services tailored to customer goals.'}
 
-### KEY QUALIFICATION QUESTIONS TO ASK NATURALLY:
+### QUALIFICATION FLOW (ASK NATURALLY WHEN RELEVANT):
 - ${qualificationQuestions || 'What is your current requirement and budget?'}
 
-### OBJECTION HANDLING RULES:
+### OBJECTIONS REFERENCE:
 ${objections || 'Address concerns respectfully and focus on ROI.'}
 
-### CLOSING CONFIRMATION:
-${agent.confirmationFlow ? agent.confirmationFlow.closingQuestion : 'Would you like to book a quick consultation? What is your name and phone number?'}
-
-Respond directly with your spoken response. Do not include markdown bold or internal monologue. Keep it ready to be spoken aloud.
+### CLOSING APPOINTMENT CONFIRMATION:
+${agent.confirmationFlow ? agent.confirmationFlow.closingQuestion : 'Would you like to book a quick consultation? What is your full name and phone number?'}
 `;
 
     const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
@@ -325,34 +331,60 @@ Respond directly with your spoken response. Do not include markdown bold or inte
       try {
         const { GoogleGenAI } = require('@google/genai');
         const ai = new GoogleGenAI({ apiKey });
-        
-        // Prepare contents
-        const contents = [
-          { role: 'user', parts: [{ text: `SYSTEM INSTRUCTION:\n${systemPrompt}` }] },
-          { role: 'model', parts: [{ text: `Understood! I am ${agent.name}. I will speak concisely and follow my knowledge base.` }] }
-        ];
 
-        // Append past conversation
-        conversationHistory.forEach(item => {
-          contents.push({
-            role: item.role === 'agent' ? 'model' : 'user',
-            parts: [{ text: item.text }]
-          });
+        // Clean conversation history into valid alternating turns
+        const historyTurns = [];
+        (conversationHistory || []).forEach(item => {
+          if (!item.text) return;
+          const role = item.role === 'agent' ? 'model' : 'user';
+          historyTurns.push({ role, text: item.text.trim() });
         });
 
-        // Append current message
+        // Avoid duplicating current message if client already appended it to history
+        if (historyTurns.length > 0 && historyTurns[historyTurns.length - 1].role === 'user' && historyTurns[historyTurns.length - 1].text === (message || '').trim()) {
+          historyTurns.pop();
+        }
+
+        // Build valid Gemini contents array starting with user turn
+        const contents = [];
+        let nextExpectedRole = 'user';
+
+        for (const turn of historyTurns) {
+          if (turn.role === nextExpectedRole) {
+            contents.push({
+              role: turn.role,
+              parts: [{ text: turn.text }]
+            });
+            nextExpectedRole = nextExpectedRole === 'user' ? 'model' : 'user';
+          }
+        }
+
         contents.push({
           role: 'user',
           parts: [{ text: message }]
         });
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: contents
-        });
+        let response;
+        try {
+          response = await ai.models.generateContent({
+            model: 'gemini-3.5-flash-lite',
+            contents: contents,
+            config: {
+              systemInstruction: systemPrompt,
+            }
+          });
+        } catch (mErr) {
+          response = await ai.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: contents,
+            config: {
+              systemInstruction: systemPrompt,
+            }
+          });
+        }
 
         if (response && response.text) {
-          aiResponseText = response.text.trim();
+          aiResponseText = response.text.replace(/[*#_`]/g, '').trim();
         }
       } catch (geminiErr) {
         console.warn('Gemini API call failed, using intelligent rule-based knowledge fallback:', geminiErr.message);
@@ -361,40 +393,54 @@ Respond directly with your spoken response. Do not include markdown bold or inte
 
     // High-fidelity fallback dialogue manager (zero downtime even without API key!)
     if (!aiResponseText) {
-      const lower = (message || '').toLowerCase();
+      const lower = (message || '').toLowerCase().trim();
 
-      // Check for price / cost
-      if (lower.includes('price') || lower.includes('cost') || lower.includes('package') || lower.includes('rate') || lower.includes('how much')) {
-        const priceKb = (agent.knowledgeBase || []).find(k => k.topic.toLowerCase().includes('price') || k.content.toLowerCase().includes('$') || k.content.toLowerCase().includes('package'));
-        if (priceKb) {
-          aiResponseText = `${priceKb.content} Does that align with your budget?`;
+      // Greetings (Hello, Salam, Hi, Kese ho)
+      if (lower.match(/\b(hi|hello|hey|salam|assalam|kese ho|kaise ho|hal chal)\b/)) {
+        if (lower.match(/\b(salam|kese ho|kaise ho|hal)\b/)) {
+          aiResponseText = `Walaikum Assalam! Main ${agent.name} hoon, bilkul theek. Hum ${agent.serviceName} provide karte hain. Main aap ki kis tarah madad kar sakta hoon?`;
         } else {
-          aiResponseText = `Our pricing starts flexibly based on your specific requirements. Would you like a custom estimate?`;
+          aiResponseText = `Hi there! I am ${agent.name}. We specialize in ${agent.serviceName}. How can I assist your project today?`;
         }
       }
-      // Check for objections (expensive, cheaper)
-      else if (lower.includes('expensive') || lower.includes('high') || lower.includes('discount') || lower.includes('cheaper')) {
+      // Pricing & Cost (Price, Cost, Kitne, Rate, Package, Fees)
+      else if (lower.includes('price') || lower.includes('cost') || lower.includes('package') || lower.includes('rate') || lower.includes('how much') || lower.includes('kitne') || lower.includes('pese') || lower.includes('charges')) {
+        const priceKb = (agent.knowledgeBase || []).find(k =>
+          (k.topic || '').toLowerCase().includes('price') || (k.content || '').toLowerCase().includes('$') || (k.content || '').toLowerCase().includes('package')
+        );
+        if (priceKb) {
+          aiResponseText = `${priceKb.content} Kya yeh aap ke budget ke mutabiq hai?`;
+        } else {
+          aiResponseText = `Hamari pricing requirements ke hisaab se shuru hoti hai. Aap ki requirement kya hai taake exact quote bata sakein?`;
+        }
+      }
+      // What services / What do you do (Kaam, Service, Offer, Detail)
+      else if (lower.includes('service') || lower.includes('kya karte ho') || lower.includes('kaam') || lower.includes('offer') || lower.includes('detail') || lower.includes('what do you do')) {
+        const serviceKb = (agent.knowledgeBase || []).find(k => (k.topic || '').toLowerCase().includes('service'));
+        aiResponseText = serviceKb
+          ? `${serviceKb.content} Aap ko primarily kis cheez ki zaroorat hai?`
+          : `Hum ${agent.serviceName} mein specialize karte hain. Aap ka main goal kya hai?`;
+      }
+      // Objections (Expensive, Mehenga, Discount)
+      else if (lower.includes('expensive') || lower.includes('mehenga') || lower.includes('discount') || lower.includes('cheaper') || lower.includes('kam karo')) {
         const obj = (agent.objectionHandling || [])[0];
-        aiResponseText = obj ? obj.counter : `We offer flexible payment terms and proven ROI. What budget did you have in mind?`;
+        aiResponseText = obj ? obj.counter : `Hum flexible milestone payments offer karte hain jo ROI ko ensure karti hain. Aap ka target budget kya hai?`;
       }
-      // Check for contact details provided
-      else if (lower.includes('@') || lower.match(/\b\d{7,14}\b/) || lower.includes('my name is') || lower.includes('call me')) {
-        aiResponseText = agent.confirmationFlow && agent.confirmationFlow.successMessage 
-          ? agent.confirmationFlow.successMessage 
-          : `Thank you! I have recorded your details and sent our team and your email the full conversation summary. We look forward to speaking with you!`;
+      // Contact details provided
+      else if (lower.includes('@') || lower.match(/\b\d{7,14}\b/) || lower.includes('my name is') || lower.includes('mera naam') || lower.includes('number hai')) {
+        aiResponseText = agent.confirmationFlow && agent.confirmationFlow.successMessage
+          ? agent.confirmationFlow.successMessage
+          : `Shukriya! Aap ki details save ho chuki hain aur conversation summary team ko dispatch kar di gayi hai.`;
       }
-      // Check for service inquiry
-      else if (lower.includes('service') || lower.includes('what do you do') || lower.includes('help') || lower.includes('offer')) {
-        const serviceKb = (agent.knowledgeBase || []).find(k => k.topic.toLowerCase().includes('service'));
-        aiResponseText = serviceKb 
-          ? `${serviceKb.content} What specific goal are you looking to achieve?`
-          : `We specialize in ${agent.serviceName}. May I ask what specific outcome you are targeting?`;
+      // Turnaround time / Delivery
+      else if (lower.includes('time') || lower.includes('kitna time') || lower.includes('din') || lower.includes('delivery') || lower.includes('duration')) {
+        const timeKb = (agent.knowledgeBase || []).find(k => (k.topic || '').toLowerCase().includes('time') || (k.topic || '').toLowerCase().includes('turnaround'));
+        aiResponseText = timeKb ? `${timeKb.content} Kya yeh timeline aap ke liye suitable hai?` : `Standard delivery 2-3 weeks mein hoti hai.`;
       }
-      // General qualification flow
+      // General consultation
       else {
-        // Pick an unasked qualification question or knowledge item
-        const nextQ = (agent.qualificationQuestions || [])[0] || 'Could you share what you are looking to get done?';
-        aiResponseText = `Understood! Regarding ${agent.serviceName}: ${nextQ}`;
+        const nextQ = (agent.qualificationQuestions || [])[0] || 'Aap ki requirement kya hai?';
+        aiResponseText = `Ji zaroor! ${agent.serviceName} ke hawaley se: ${nextQ}`;
       }
     }
 

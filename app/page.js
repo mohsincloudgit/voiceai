@@ -151,12 +151,13 @@ export default function Dashboard() {
       notificationEmail: agentFormData.notificationEmail,
       welcomeMessage: agentFormData.welcomeMessage,
       voicePitch: agentFormData.voicePitch,
-      qualificationQuestions: agentFormData.qualificationQuestions
+      qualificationQuestions: (typeof agentFormData.qualificationQuestions === 'string' ? agentFormData.qualificationQuestions : '')
         .split('\n')
         .map(q => q.trim())
         .filter(Boolean),
-      knowledgeBase: agentFormData.knowledgeBase
-        .filter(k => k.topic.trim() || k.content.trim()),
+      knowledgeBase: (agentFormData.knowledgeBase || [])
+        .filter(k => (k.topic || '').trim() || (k.content || '').trim())
+        .map(k => ({ topic: (k.topic || '').trim(), content: (k.content || '').trim() })),
       confirmationFlow: {
         closingQuestion: agentFormData.closingQuestion,
         successMessage: 'Thank you! Your inquiry has been confirmed and dispatched to our team.'

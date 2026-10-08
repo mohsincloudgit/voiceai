@@ -20,8 +20,9 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    const fromEmail = settings.smtpUser || process.env.SMTP_USER;
     const info = await transporter.sendMail({
-      from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${settings.smtpUser}>`,
+      from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${fromEmail}>`,
       to: targetEmail,
       subject: '✅ Voice Agent CRM: SMTP Connection Test Successful',
       html: `

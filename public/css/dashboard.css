@@ -568,21 +568,44 @@ body {
   padding: 20px;
 }
 
-.modal-overlay.open {
-  display: flex;
+.modal-overlay.open,
+.modal-overlay.active {
+  display: flex !important;
 }
 
-.modal-container {
+.modal-container,
+.modal-content {
   background: #0f1526;
-  border: 1px solid var(--border-active);
+  border: 1px solid var(--border-active, rgba(255, 255, 255, 0.1));
   border-radius: 18px;
   width: 100%;
-  max-width: 680px;
+  max-width: 720px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
+  padding: 24px;
+  color: #ffffff;
+  position: relative;
+  z-index: 1001;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .modal-header {

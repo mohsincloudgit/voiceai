@@ -11,6 +11,7 @@ export default function WidgetPage() {
   const [agent, setAgent] = useState(null);
   const [activeView, setActiveView] = useState('voice'); // 'voice' | 'chat'
   const [isMuted, setIsMuted] = useState(false);
+  const [voiceLang, setVoiceLang] = useState('ur-PK'); // 'ur-PK' | 'en-US' | 'hi-IN'
   const [isListening, setIsListening] = useState(false);
   const [agentState, setAgentState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
   const [statusText, setStatusText] = useState('Ready to Talk');
@@ -90,7 +91,7 @@ export default function WidgetPage() {
         const recog = new SpeechRecognition();
         recog.continuous = false;
         recog.interimResults = true;
-        recog.lang = 'en-US';
+        recog.lang = voiceLang;
 
         recog.onstart = () => {
           setIsListening(true);
@@ -207,6 +208,7 @@ export default function WidgetPage() {
     } else {
       if (synthRef.current) synthRef.current.cancel();
       try {
+        if (recognitionRef.current) recognitionRef.current.lang = voiceLang;
         recognitionRef.current.start();
       } catch (e) {
         console.warn('Recognition start error:', e);
@@ -283,12 +285,21 @@ export default function WidgetPage() {
 
         // Pre-fill lead form if contact info detected in message
         if (data.detectedInfo) {
-          if (data.detectedInfo.email) {
-            setLeadFormData(prev => ({ ...prev, customerEmail: data.detectedInfo.email }));
-          }
-          if (data.detectedInfo.phone) {
-            setLeadFormData(prev => ({ ...prev, customerPhone: data.detectedInfo.phone }));
-          }
+          setLeadFormData(prev => ({
+            ...prev,
+            customerName: data.detectedInfo.name || prev.customerName,
+            customerEmail: data.detectedInfo.email || prev.customerEmail,
+            customerPhone: data.detectedInfo.phone || prev.customerPhone,
+          }));
+        }
+
+        // Automatic Booking Confirmation feedback
+        if (data.bookingConfirmed) {
+          setLeadSubmitted(true);
+          setStatusText(data.emailSent ? '🎉 Appointment Confirmed & Emailed!' : '🎉 Appointment Confirmed!');
+          setTimeout(() => {
+            setLeadSubmitted(false);
+          }, 8000);
         }
 
         // Speak aloud
@@ -388,6 +399,30 @@ export default function WidgetPage() {
           </div>
 
           <div className="header-actions">
+            <select
+              value={voiceLang}
+              onChange={(e) => {
+                const nextL = e.target.value;
+                setVoiceLang(nextL);
+                if (recognitionRef.current) recognitionRef.current.lang = nextL;
+              }}
+              title="Voice language (Urdu / English / Hindi)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
+                borderRadius: '8px',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="ur-PK" style={{ background: '#0e1322', color: '#fff' }}>🇵🇰 Urdu</option>
+              <option value="en-US" style={{ background: '#0e1322', color: '#fff' }}>🇺🇸 English</option>
+              <option value="hi-IN" style={{ background: '#0e1322', color: '#fff' }}>🇮🇳 Hindi</option>
+            </select>
             <button onClick={toggleMute} className="icon-btn" title={isMuted ? 'Unmute Speech' : 'Mute Speech'}>
               {!isMuted ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -461,6 +496,22 @@ export default function WidgetPage() {
               </div>
 
               {/* Live Subtitle Box */}
+              {leadSubmitted && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35))',
+                  border: '1px solid #10b981',
+                  color: '#6ee7b7',
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  marginBottom: '10px',
+                  boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
+                }}>
+                  🎉 <strong>Booking Confirmed!</strong> Confirmation & details dispatched to your email.
+                </div>
+              )}
               <div className="live-subtitle-box">
                 <div className="live-speaker-label">
                   <span>{subtitle.speaker}</span>
