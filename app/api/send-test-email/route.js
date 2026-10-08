@@ -6,7 +6,7 @@ export async function POST(request) {
   try {
     const settings = readJson(SETTINGS_FILE, {});
     const body = await request.json().catch(() => ({}));
-    const targetEmail = body.email || settings.notificationEmail;
+    const targetEmail = body.email || settings.notificationEmail || process.env.NOTIFICATION_EMAIL;
 
     if (!targetEmail) {
       return NextResponse.json({ success: false, error: 'Target email is required' }, { status: 400 });

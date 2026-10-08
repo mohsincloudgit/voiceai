@@ -88,15 +88,29 @@ Paste this snippet inside your website footer:
 
 ## ✉️ Setting Up Email Notifications (Gmail / SMTP)
 
+You can configure automated email notifications and full voice transcript delivery in two ways:
+
+### Method 1: Via `.env` File (Recommended for Servers & Deployments)
+Create a `.env` file in the root directory (based on `.env.example`):
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_16_digit_app_password
+NOTIFICATION_EMAIL=admin_leads@yourcompany.com
+```
+
+### Method 2: Via CRM Dashboard UI
 1. Open the CRM Dashboard: [http://localhost:3000](http://localhost:3000).
-2. Click on **"SMTP & Email Config"** in the sidebar.
+2. Click on **"Settings"** in the sidebar.
 3. Enter your SMTP details:
    - **SMTP Host**: `smtp.gmail.com`
    - **SMTP Port**: `587`
    - **SMTP User**: `your-email@gmail.com`
-   - **SMTP Pass**: Your 16-character Google **App Password** (Generated in Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App Passwords).
-   - **Admin Notification Recipient**: The email address where all new lead notifications and full transcripts should be delivered.
-4. Click **"Send Test Email"** to verify connection.
+   - **SMTP Pass**: Your 16-character Google **App Password** (Generate directly at: [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)).
+   - **Admin Notification Recipient**: Email address where all qualified leads and audio transcripts should be delivered.
+4. Click **"Save CRM Settings"** and then **"Send Test Email"** to verify the connection.
 
 ---
 
