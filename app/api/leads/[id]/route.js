@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getLeadById, saveLead, deleteLead } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET(request, context) {
   try {
@@ -35,6 +36,14 @@ export async function PATCH(request, context) {
 
 export async function DELETE(request, context) {
   try {
+    const user = getUserFromRequest(request);
+    if (user && user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: Only Admin can delete lead records' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await context.params;
     await deleteLead(id);
     return NextResponse.json({ success: true, message: 'Lead deleted' });
@@ -42,3 +51,4 @@ export async function DELETE(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

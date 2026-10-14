@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSettings, saveSettings, getDatabaseStatus } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET() {
   const currentSettings = await getSettings();
@@ -31,6 +32,14 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    const user = getUserFromRequest(request);
+    if (user && user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: Only Admin can update settings' },
+        { status: 403 }
+      );
+    }
+
     const currentSettings = await getSettings();
     const newSettings = await request.json();
 

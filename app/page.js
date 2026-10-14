@@ -4,6 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function Dashboard() {
+  // Auth State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
+  const [authForm, setAuthForm] = useState({ name: '', email: '', password: '' });
+  const [authError, setAuthError] = useState('');
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  // App Tabs & Data
   const [activeTab, setActiveTab] = useState('overview');
   const [agents, setAgents] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -41,6 +50,10 @@ export default function Dashboard() {
     knowledgeBase: [{ topic: '', content: '' }],
   });
 
+  // View-Only Agent Modal (for Clients/Users)
+  const [isAgentViewModalOpen, setIsAgentViewModalOpen] = useState(false);
+  const [viewingAgent, setViewingAgent] = useState(null);
+
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
@@ -53,21 +66,49 @@ export default function Dashboard() {
   const [settingsFeedback, setSettingsFeedback] = useState({ type: '', message: '' });
   const [testEmailLoading, setTestEmailLoading] = useState(false);
 
-  // Load Initial Data
+  // 1. Initial Authentication Check
   useEffect(() => {
-    fetchAgents();
-    fetchLeads();
-    fetchSettings();
+    checkAuth();
   }, []);
 
-  const fetchAgents = async () => {
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+        loadDashboardData(data.user);
+      } else {
+        setCurrentUser(null);
+      }
+    } catch (err) {
+      console.error('Failed to verify auth:', err);
+      setCurrentUser(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const loadDashboardData = (user) => {
+    fetchAgents(user);
+    fetchLeads();
+    if (user?.role === 'admin') {
+      fetchSettings();
+    }
+  };
+
+  const fetchAgents = async (user = currentUser) => {
     try {
       const res = await fetch('/api/agents');
       const data = await res.json();
       if (data.success) {
         setAgents(data.agents || []);
         if (data.agents?.length > 0 && !selectedEmbedAgent) {
-          setSelectedEmbedAgent(data.agents[0].id);
+          // If non-admin, pick assigned agent
+          const defaultAgent = (user && user.role !== 'admin')
+            ? (data.agents.find(a => a.id === 'agent_ai_automation_ghl') || data.agents[0])
+            : data.agents[0];
+          setSelectedEmbedAgent(defaultAgent?.id || '');
         }
       }
     } catch (err) {
@@ -99,8 +140,77 @@ export default function Dashboard() {
     }
   };
 
-  // Agent Modal Handlers
+  // Auth Actions
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSubmitting(true);
+
+    try {
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const payload = authMode === 'login'
+        ? { email: authForm.email, password: authForm.password }
+        : { name: authForm.name, email: authForm.email, password: authForm.password };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+        setActiveTab('overview');
+        loadDashboardData(data.user);
+      } else {
+        setAuthError(data.error || 'Authentication failed. Please check your credentials.');
+      }
+    } catch (err) {
+      setAuthError('Connection error: ' + err.message);
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    setCurrentUser(null);
+    setAuthForm({ name: '', email: '', password: '' });
+    setActiveTab('overview');
+  };
+
+  const handleFillDemo = (type) => {
+    setAuthMode('login');
+    setAuthError('');
+    if (type === 'admin') {
+      setAuthForm({ name: '', email: 'admin@voiceai.com', password: 'admin123' });
+    } else {
+      setAuthForm({ name: '', email: 'client@voiceai.com', password: 'client123' });
+    }
+  };
+
+  // RBAC Computations
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Visible agents according to user role:
+  // Admin sees all agents; Client only sees recent agent (agent_ai_automation_ghl)
+  const visibleAgents = isAdmin
+    ? agents
+    : agents.filter(a => a.id === 'agent_ai_automation_ghl' || (currentUser?.assignedAgents && currentUser.assignedAgents.includes(a.id)));
+
+  // Visible leads according to role
+  const visibleLeads = isAdmin
+    ? leads
+    : leads.filter(l => l.agentId === 'agent_ai_automation_ghl' || (currentUser?.assignedAgents && currentUser.assignedAgents.includes(l.agentId)));
+
+  // Agent Modal Handlers (Admin Only)
   const openNewAgentModal = () => {
+    if (!isAdmin) return;
     setEditingAgent(null);
     setAgentFormData({
       id: '',
@@ -122,6 +232,7 @@ export default function Dashboard() {
   };
 
   const openEditAgentModal = (agent) => {
+    if (!isAdmin) return;
     setEditingAgent(agent);
     setAgentFormData({
       id: agent.id,
@@ -141,8 +252,19 @@ export default function Dashboard() {
     setIsAgentModalOpen(true);
   };
 
+  // View Only Modal (For Clients)
+  const openViewAgentModal = (agent) => {
+    setViewingAgent(agent);
+    setIsAgentViewModalOpen(true);
+  };
+
   const handleSaveAgent = async (e) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert('Access Denied: Only Admin can create or modify agents');
+      return;
+    }
+
     const payload = {
       id: agentFormData.id || undefined,
       name: agentFormData.name,
@@ -175,6 +297,8 @@ export default function Dashboard() {
       if (data.success) {
         setIsAgentModalOpen(false);
         fetchAgents();
+      } else {
+        alert('Error: ' + data.error);
       }
     } catch (err) {
       alert('Error saving agent: ' + err.message);
@@ -182,12 +306,18 @@ export default function Dashboard() {
   };
 
   const handleDeleteAgent = async (id) => {
+    if (!isAdmin) {
+      alert('Access Denied: Only Admin can delete agents');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this agent?')) return;
     try {
       const res = await fetch(`/api/agents/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         fetchAgents();
+      } else {
+        alert('Error: ' + data.error);
       }
     } catch (err) {
       alert('Error deleting agent: ' + err.message);
@@ -250,6 +380,10 @@ export default function Dashboard() {
   };
 
   const handleDeleteLead = async (leadId) => {
+    if (!isAdmin) {
+      alert('Access Denied: Only Admin can delete leads');
+      return;
+    }
     if (!confirm('Delete this lead record permanently?')) return;
     try {
       const res = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
@@ -257,15 +391,18 @@ export default function Dashboard() {
       if (data.success) {
         setLeads(leads.filter(l => l.id !== leadId));
         setIsLeadModalOpen(false);
+      } else {
+        alert('Error: ' + data.error);
       }
     } catch (err) {
       alert('Delete error: ' + err.message);
     }
   };
 
-  // Settings Handlers
+  // Settings Handlers (Admin Only)
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    if (!isAdmin) return;
     setSettingsFeedback({ type: '', message: '' });
     try {
       const res = await fetch('/api/settings', {
@@ -285,6 +422,7 @@ export default function Dashboard() {
   };
 
   const handleTestSmtp = async () => {
+    if (!isAdmin) return;
     setTestEmailLoading(true);
     setSettingsFeedback({ type: '', message: '' });
     try {
@@ -306,11 +444,8 @@ export default function Dashboard() {
     }
   };
 
-  const voiceLeadsCount = leads.filter(l => !(l.leadSource === 'Text Chat' || l.channel === 'Text Message')).length;
-  const textLeadsCount = leads.filter(l => l.leadSource === 'Text Chat' || l.channel === 'Text Message').length;
-
   // Filtered Leads
-  const filteredLeads = leads.filter(l => {
+  const filteredLeads = visibleLeads.filter(l => {
     const matchesAgent = agentFilter === 'all' || l.agentId === agentFilter;
     const isLeadText = l.leadSource === 'Text Chat' || l.channel === 'Text Message';
     const matchesChannel = channelFilter === 'all' ||
@@ -327,7 +462,7 @@ export default function Dashboard() {
 
   // Embed Snippets
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-  const targetAgentId = selectedEmbedAgent || (agents[0]?.id || 'agent_digital_agency');
+  const targetAgentId = selectedEmbedAgent || (visibleAgents[0]?.id || 'agent_ai_automation_ghl');
 
   const scriptSnippet = `<!-- AI Voice Sales Agent Footer Embed -->
 <script 
@@ -353,6 +488,183 @@ export default function Dashboard() {
     setTimeout(() => setCopyFeedback(''), 3000);
   };
 
+  // -------------------------------------------------------------
+  // RENDER: Loading State
+  // -------------------------------------------------------------
+  if (authLoading) {
+    return (
+      <div style={{
+        height: '100vh',
+        width: '100vw',
+        background: '#090d16',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#f8fafc',
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '3px solid rgba(99, 102, 241, 0.2)',
+          borderTopColor: '#6366f1',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+          marginBottom: '16px'
+        }}></div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Authenticating session...</p>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Auth Portal (Login / Signup Screen)
+  // -------------------------------------------------------------
+  if (!currentUser) {
+    return (
+      <>
+        <link rel="stylesheet" href="/css/dashboard.css" />
+        <div className="auth-wrapper">
+          <div className="auth-card">
+            <div className="auth-header">
+              <div className="auth-logo-badge">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.3">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="22"></line>
+                </svg>
+              </div>
+              <h1>Voice Agent CRM</h1>
+              <p>Sign in to access your AI sales assistant portal</p>
+            </div>
+
+            {/* Quick Demo Credentials Autofill */}
+            <div className="auth-demo-chips">
+              <div className="auth-demo-label">
+                <span>⚡</span> 1-Click Fast Demo Login:
+              </div>
+              <div className="demo-chip-group">
+                <button
+                  type="button"
+                  onClick={() => handleFillDemo('admin')}
+                  className="demo-chip-btn"
+                >
+                  <strong>👑 Main Admin</strong>
+                  <span>Full CRUD & All Agents</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFillDemo('client')}
+                  className="demo-chip-btn"
+                >
+                  <strong>👤 Client / User</strong>
+                  <span>Recent Agent (View Only)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Login / Signup Switcher */}
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={`auth-tab-btn ${authMode === 'login' ? 'active' : ''}`}
+                onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`auth-tab-btn ${authMode === 'signup' ? 'active' : ''}`}
+                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+              >
+                Create Client Account
+              </button>
+            </div>
+
+            {authError && (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '10px',
+                marginBottom: '18px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid #ef4444',
+                color: '#fca5a5',
+                fontSize: '13px',
+                lineHeight: 1.4
+              }}>
+                {authError}
+              </div>
+            )}
+
+            <form onSubmit={handleAuthSubmit}>
+              {authMode === 'signup' && (
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                    className="form-control"
+                  />
+                </div>
+              )}
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                  className="form-control"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label>Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                  className="form-control"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authSubmitting}
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '15px' }}
+              >
+                {authSubmitting
+                  ? 'Verifying...'
+                  : (authMode === 'login' ? 'Sign In to Dashboard &rarr;' : 'Create Account &rarr;')}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12.5px', color: '#64748b' }}>
+              {authMode === 'login' ? (
+                <>New client? <a onClick={() => setAuthMode('signup')} style={{ color: '#818cf8', cursor: 'pointer', textDecoration: 'underline' }}>Sign up here</a></>
+              ) : (
+                <>Already have credentials? <a onClick={() => setAuthMode('login')} style={{ color: '#818cf8', cursor: 'pointer', textDecoration: 'underline' }}>Log in here</a></>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Main Dashboard (Admin & Client Views)
+  // -------------------------------------------------------------
   return (
     <>
       <link rel="stylesheet" href="/css/dashboard.css" />
@@ -369,7 +681,9 @@ export default function Dashboard() {
           </div>
           <div className="brand-text">
             <h2>Voice Agent CRM</h2>
-            <span>Knowledge & Sales Engine</span>
+            <span style={{ color: isAdmin ? '#10b981' : '#38bdf8' }}>
+              {isAdmin ? 'Main Admin Portal' : 'Client Access Portal'}
+            </span>
           </div>
         </div>
 
@@ -399,8 +713,8 @@ export default function Dashboard() {
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <span>Voice Agents & KB</span>
-            <span className="nav-badge">{agents.length}</span>
+            <span>{isAdmin ? 'Voice Agents & KB Studio' : 'Assigned Agent (View Only)'}</span>
+            <span className="nav-badge">{visibleAgents.length}</span>
           </a>
 
           <a
@@ -416,7 +730,7 @@ export default function Dashboard() {
               <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
             <span>Leads & Transcripts</span>
-            <span className="nav-badge">{leads.length}</span>
+            <span className="nav-badge">{visibleLeads.length}</span>
           </a>
 
           <a
@@ -431,17 +745,20 @@ export default function Dashboard() {
             <span>Iframe & Footer Embed</span>
           </a>
 
-          <a
-            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-            style={{ cursor: 'pointer' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <span>SMTP & Email Config</span>
-          </a>
+          {/* Settings Tab: ONLY VISIBLE TO MAIN ADMIN */}
+          {isAdmin && (
+            <a
+              className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+              style={{ cursor: 'pointer' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>SMTP & Email Config</span>
+            </a>
+          )}
         </nav>
 
         <div className="sidebar-footer">
@@ -461,34 +778,60 @@ export default function Dashboard() {
         <header className="crm-header">
           <div className="crm-title">
             <h1>
-              {activeTab === 'overview' && 'Overview Dashboard'}
-              {activeTab === 'agents' && 'Voice Agents & Knowledge Base Studio'}
-              {activeTab === 'leads' && 'Captured Leads & Full Transcripts'}
+              {activeTab === 'overview' && (isAdmin ? 'Admin Overview Dashboard' : 'Client Overview Dashboard')}
+              {activeTab === 'agents' && (isAdmin ? 'Voice Agents & Knowledge Base Studio' : 'Assigned AI Agent (View Only)')}
+              {activeTab === 'leads' && (isAdmin ? 'All Leads & Full Transcripts' : 'Your Inquiries & Transcripts')}
               {activeTab === 'embed' && 'Website Footer & Iframe Embed Generator'}
               {activeTab === 'settings' && 'Email Dispatcher & AI Settings'}
             </h1>
             <p>
-              {activeTab === 'overview' && 'Voice agent performance, incoming inquiries, and conversion stats.'}
-              {activeTab === 'agents' && 'Create custom agents tailored to each service with bespoke qualification rules.'}
-              {activeTab === 'leads' && 'Inspect full customer voice conversations and auto-dispatched emails.'}
-              {activeTab === 'embed' && 'Get 1-click embed code to add the voice agent to any client website footer.'}
+              {activeTab === 'overview' && (isAdmin ? 'Real-time performance, all agents, incoming inquiries, and conversion stats.' : 'Performance metrics and visitor conversations for your assigned AI agent.')}
+              {activeTab === 'agents' && (isAdmin ? 'Create custom agents tailored to each service with bespoke qualification rules.' : 'Your dedicated AI sales agent details. View-only access with interactive testing and embed code.')}
+              {activeTab === 'leads' && (isAdmin ? 'Inspect full customer voice and chat conversations across all agents.' : 'Inspect inquiries and transcripts captured by your AI agent.')}
+              {activeTab === 'embed' && 'Get 1-click embed code to add your voice agent to any client website footer.'}
               {activeTab === 'settings' && 'Configure SMTP credentials and Google Gemini intelligence.'}
             </p>
           </div>
-          <div className="header-btn-group">
-            <button onClick={openNewAgentModal} className="btn btn-primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              New Voice Agent
-            </button>
+
+          <div className="header-btn-group" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Create New Agent Button: ADMIN ONLY */}
+            {isAdmin && (
+              <button onClick={openNewAgentModal} className="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Voice Agent
+              </button>
+            )}
+
             <a href={`/widget/${targetAgentId}`} target="_blank" className="btn btn-outline">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
               Live Widget Preview
             </a>
+
+            {/* User Profile & Role Info Bar */}
+            <div className="user-profile-bar">
+              <div className="user-profile-avatar">
+                {currentUser?.name ? currentUser.name[0] : (isAdmin ? 'A' : 'C')}
+              </div>
+              <div className="user-profile-info">
+                <span className="user-profile-name">{currentUser?.name || currentUser?.email}</span>
+                <span className={`user-profile-role-badge ${isAdmin ? 'role-admin' : 'role-user'}`}>
+                  {isAdmin ? '👑 Main Admin (Full)' : '👤 Client (View Only)'}
+                </span>
+              </div>
+              <button onClick={handleLogout} className="btn-logout" title="Sign out">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Logout
+              </button>
+            </div>
           </div>
         </header>
 
@@ -505,8 +848,8 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="metric-data">
-                  <h3>{agents.length}</h3>
-                  <p>Active Voice Agents</p>
+                  <h3>{visibleAgents.length}</h3>
+                  <p>{isAdmin ? 'Active Voice Agents' : 'Assigned Agent'}</p>
                 </div>
               </div>
 
@@ -519,7 +862,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="metric-data">
-                  <h3>{leads.length}</h3>
+                  <h3>{visibleLeads.length}</h3>
                   <p>Captured Leads</p>
                 </div>
               </div>
@@ -532,7 +875,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="metric-data">
-                  <h3>{leads.filter(l => l.emailSent).length}</h3>
+                  <h3>{visibleLeads.filter(l => l.emailSent).length}</h3>
                   <p>Transcripts Emailed</p>
                 </div>
               </div>
@@ -546,8 +889,8 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="metric-data">
-                  <h3>{leads.length > 0 ? '88%' : '0%'}</h3>
-                  <p>Avg Qualification Rate</p>
+                  <h3>{visibleLeads.length > 0 ? '92%' : '0%'}</h3>
+                  <p>Qualification Rate</p>
                 </div>
               </div>
             </div>
@@ -555,8 +898,12 @@ export default function Dashboard() {
             <div className="card-panel">
               <div className="panel-header">
                 <div>
-                  <h2>Recent Voice Leads & Transcripts</h2>
-                  <p>Real-time customer inquiries captured from embedded widgets</p>
+                  <h2>Recent Inquiries & Transcripts</h2>
+                  <p>
+                    {isAdmin
+                      ? 'Real-time customer inquiries captured from all embedded widgets'
+                      : 'Real-time customer inquiries captured from your assigned agent'}
+                  </p>
                 </div>
                 <button onClick={() => setActiveTab('leads')} className="btn btn-outline btn-sm">
                   View All Leads &rarr;
@@ -578,14 +925,14 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {leads.length === 0 ? (
+                    {visibleLeads.length === 0 ? (
                       <tr>
                         <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
                           No leads captured yet. Test the voice or text agent from the widget preview!
                         </td>
                       </tr>
                     ) : (
-                      leads.slice(0, 5).map(lead => (
+                      visibleLeads.slice(0, 5).map(lead => (
                         <tr key={lead.id}>
                           <td>
                             <strong>{lead.customerName || 'Website Visitor'}</strong>
@@ -642,21 +989,29 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* TAB 2: VOICE AGENTS & KB */}
+        {/* TAB 2: VOICE AGENTS */}
         {activeTab === 'agents' && (
           <section className="tab-content-section active">
             <div className="section-toolbar">
               <div>
-                <h2>Custom Service Voice Agents</h2>
-                <p>Each agent has its own tone, service domain, qualification rules, and custom knowledge base.</p>
+                <h2>{isAdmin ? 'Custom Service Voice Agents' : 'Your Assigned AI Voice Agent'}</h2>
+                <p>
+                  {isAdmin
+                    ? 'All agents in the system. Full editing, deleting, and training capabilities.'
+                    : 'View-only access to your assigned agent. Edit and delete permissions are restricted to the Main Admin.'}
+                </p>
               </div>
-              <button onClick={openNewAgentModal} className="btn btn-primary">
-                + Create New Agent
-              </button>
+
+              {/* Only Admin sees Create New Agent button */}
+              {isAdmin && (
+                <button onClick={openNewAgentModal} className="btn btn-primary">
+                  + Create New Agent
+                </button>
+              )}
             </div>
 
             <div className="agents-grid">
-              {agents.map(agent => (
+              {visibleAgents.map(agent => (
                 <div key={agent.id} className="agent-card">
                   <div className="agent-card-header">
                     <img
@@ -668,6 +1023,11 @@ export default function Dashboard() {
                     <div className="agent-card-meta">
                       <h3>{agent.name}</h3>
                       <span className="agent-service-badge">{agent.serviceName}</span>
+                      {!isAdmin && (
+                        <div style={{ marginTop: '6px' }}>
+                          <span className="view-only-pill">🔒 View-Only</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -682,22 +1042,50 @@ export default function Dashboard() {
                   </div>
 
                   <div className="agent-card-actions">
-                    <button onClick={() => openEditAgentModal(agent)} className="btn btn-primary btn-sm">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                      </svg>
-                      Edit KB & Agent
-                    </button>
-                    <a href={`/widget/${agent.id}`} target="_blank" className="btn btn-outline btn-sm">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                      </svg>
-                      Test Voice
-                    </a>
-                    <button onClick={() => handleDeleteAgent(agent.id)} className="btn btn-danger btn-sm" title="Delete">
-                      &times;
-                    </button>
+                    {/* Admin Actions: Edit & Delete */}
+                    {isAdmin ? (
+                      <>
+                        <button onClick={() => openEditAgentModal(agent)} className="btn btn-primary btn-sm">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                          </svg>
+                          Edit KB & Agent
+                        </button>
+                        <a href={`/widget/${agent.id}`} target="_blank" className="btn btn-outline btn-sm">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                          </svg>
+                          Test Voice
+                        </a>
+                        <button onClick={() => handleDeleteAgent(agent.id)} className="btn btn-danger btn-sm" title="Delete">
+                          &times;
+                        </button>
+                      </>
+                    ) : (
+                      /* Client Actions: View Details & Test ONLY (No Edit, No Delete) */
+                      <>
+                        <button onClick={() => openViewAgentModal(agent)} className="btn btn-primary btn-sm">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          </svg>
+                          View Details
+                        </button>
+                        <a href={`/widget/${agent.id}`} target="_blank" className="btn btn-outline btn-sm">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                          </svg>
+                          Test Voice & Text
+                        </a>
+                        <button
+                          onClick={() => { setSelectedEmbedAgent(agent.id); setActiveTab('embed'); }}
+                          className="btn btn-outline btn-sm"
+                        >
+                          Embed
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -722,15 +1110,18 @@ export default function Dashboard() {
                 />
               </div>
 
-              <div className="filter-group">
-                <label>Filter by Agent:</label>
-                <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
-                  <option value="all">All Agents</option>
-                  {agents.map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Agent filter only makes sense if multiple agents visible */}
+              {isAdmin && (
+                <div className="filter-group">
+                  <label>Filter by Agent:</label>
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
+                    <option value="all">All Agents</option>
+                    {visibleAgents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="filter-group">
                 <label>Filter by Channel:</label>
@@ -797,7 +1188,7 @@ export default function Dashboard() {
                           </td>
                           <td style={{ maxWidth: '240px' }}>
                             <div style={{ fontSize: '12px', color: '#cbd5e1', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                              {lead.summary || 'Lead captured via interactive audio consultation.'}
+                              {lead.summary || 'Lead captured via interactive consultation.'}
                             </div>
                           </td>
                           <td>
@@ -874,7 +1265,7 @@ export default function Dashboard() {
                     onChange={(e) => setSelectedEmbedAgent(e.target.value)}
                     className="form-control"
                   >
-                    {agents.map(a => (
+                    {visibleAgents.map(a => (
                       <option key={a.id} value={a.id}>{a.name} ({a.serviceName})</option>
                     ))}
                   </select>
@@ -952,8 +1343,8 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* TAB 5: SETTINGS */}
-        {activeTab === 'settings' && (
+        {/* TAB 5: SETTINGS (ADMIN ONLY) */}
+        {activeTab === 'settings' && isAdmin && (
           <section className="tab-content-section active">
             <div className="card-panel" style={{ maxWidth: '800px' }}>
               <div className="panel-header">
@@ -1005,7 +1396,7 @@ export default function Dashboard() {
                   </div>
                   <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>
                     {settings.dbStatus?.isFirebaseConfigured
-                      ? 'Live on Google Cloud Firestore. Architecture abstracted for future AWS DynamoDB migration with zero code changes.'
+                      ? 'Live on Google Cloud Firestore. Multi-tenant RBAC enabled with Admin and Client accounts.'
                       : 'Firebase is set as primary. Add FIREBASE_PROJECT_ID in .env and run "npm run migrate:firebase" to upload local data. Local JSON active as graceful fallback.'}
                   </p>
                 </div>
@@ -1131,8 +1522,8 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* MODAL: CREATE / EDIT AGENT */}
-      {isAgentModalOpen && (
+      {/* MODAL 1: CREATE / EDIT AGENT (ADMIN ONLY) */}
+      {isAgentModalOpen && isAdmin && (
         <div className="modal-overlay active">
           <div className="modal-content" style={{ maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
@@ -1286,7 +1677,101 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MODAL: INSPECT LEAD DETAIL & TRANSCRIPT */}
+      {/* MODAL 2: VIEW AGENT DETAILS (CLIENT / VIEW ONLY) */}
+      {isAgentViewModalOpen && viewingAgent && (
+        <div className="modal-overlay active">
+          <div className="modal-content" style={{ maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2>{viewingAgent.name}</h2>
+                <span className="view-only-pill">🔒 View Only</span>
+              </div>
+              <button onClick={() => setIsAgentViewModalOpen(false)} className="modal-close-btn">&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#0e1322', padding: '16px', borderRadius: '12px', marginBottom: '18px' }}>
+              <img
+                src={viewingAgent.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${viewingAgent.primaryColor || '#6366f1'}` }}
+                alt={viewingAgent.name}
+              />
+              <div>
+                <h3 style={{ color: '#fff', fontSize: '18px', margin: 0 }}>{viewingAgent.name}</h3>
+                <span className="badge badge-purple" style={{ marginTop: '4px' }}>{viewingAgent.serviceName}</span>
+                <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                  <strong>Persona:</strong> {viewingAgent.voicePitch || 'Consultative and professional'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', marginBottom: '6px' }}>
+                🎙️ Spoken Welcome Greeting
+              </div>
+              <div style={{ padding: '14px', background: 'rgba(99, 102, 241, 0.12)', borderLeft: '4px solid #6366f1', borderRadius: '8px', color: '#f8fafc', fontSize: '14px', fontStyle: 'italic', lineHeight: 1.5 }}>
+                "{viewingAgent.welcomeMessage}"
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px' }}>
+                📚 Built-In Knowledge Base ({(viewingAgent.knowledgeBase || []).length} Topics)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                {(viewingAgent.knowledgeBase || []).map((kb, idx) => (
+                  <div key={idx} style={{ background: '#0e1322', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8', marginBottom: '4px' }}>
+                      📌 {kb.topic}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.45 }}>
+                      {kb.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px' }}>
+                🎯 Automatic Lead Qualification Questions
+              </div>
+              <div style={{ background: '#0e1322', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <ul style={{ margin: 0, paddingLeft: '18px', color: '#e2e8f0', fontSize: '13px', lineHeight: 1.6 }}>
+                  {(viewingAgent.qualificationQuestions || []).map((q, idx) => (
+                    <li key={idx} style={{ marginBottom: '4px' }}>{q}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                Note: Editing and deleting is reserved for Main Admin.
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a href={`/widget/${viewingAgent.id}`} target="_blank" className="btn btn-primary btn-sm">
+                  Launch Live Widget &rarr;
+                </a>
+                <button
+                  onClick={() => {
+                    setSelectedEmbedAgent(viewingAgent.id);
+                    setIsAgentViewModalOpen(false);
+                    setActiveTab('embed');
+                  }}
+                  className="btn btn-outline btn-sm"
+                >
+                  Copy Embed Code
+                </button>
+                <button onClick={() => setIsAgentViewModalOpen(false)} className="btn btn-outline btn-sm">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: INSPECT LEAD DETAIL & TRANSCRIPT */}
       {isLeadModalOpen && selectedLead && (
         <div className="modal-overlay active">
           <div className="modal-content" style={{ maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1375,9 +1860,17 @@ export default function Dashboard() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button onClick={() => handleDeleteLead(selectedLead.id)} className="btn btn-danger btn-sm">
-                Delete Lead Record
-              </button>
+              {/* Only Admin can delete lead record */}
+              {isAdmin ? (
+                <button onClick={() => handleDeleteLead(selectedLead.id)} className="btn btn-danger btn-sm">
+                  Delete Lead Record
+                </button>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Lead Record (Read-Only)
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => handleResendEmail(selectedLead.id)} className="btn btn-primary btn-sm">
                   Resend Notification Email

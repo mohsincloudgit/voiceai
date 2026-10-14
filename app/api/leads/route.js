@@ -2,10 +2,19 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getAgents, getLeads, saveLead, getSettings } from '@/lib/db';
 import { getEmailTransporter, generateLeadEmailHtml } from '@/lib/email';
+import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request) {
   try {
     const leads = await getLeads();
+    const user = getUserFromRequest(request);
+
+    if (user && user.role !== 'admin') {
+      const allowedAgents = user.assignedAgents || ['agent_ai_automation_ghl'];
+      const filtered = leads.filter(l => allowedAgents.includes(l.agentId));
+      return NextResponse.json({ success: true, leads: filtered });
+    }
+
     return NextResponse.json({ success: true, leads });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

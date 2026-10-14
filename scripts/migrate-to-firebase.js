@@ -87,10 +87,30 @@ async function migrate() {
     }
   }
 
+  // 4. Migrate Users
+  const usersFile = path.join(dataDir, 'users.json');
+  let usersCount = 0;
+  if (fs.existsSync(usersFile)) {
+    try {
+      const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8') || '[]');
+      console.log(`⏳ Migrating ${users.length} users to collection "users"...`);
+      for (const user of users) {
+        if (!user.id) user.id = 'user_' + Date.now();
+        const { id, ...data } = user;
+        await db.collection('users').doc(id).set(data, { merge: true });
+        usersCount++;
+      }
+      console.log(`✅ ${usersCount} users migrated successfully.`);
+    } catch (err) {
+      console.error('❌ Error migrating users:', err.message);
+    }
+  }
+
   console.log('\n========================================');
   console.log('🎉 Firebase Firestore Migration Complete!');
   console.log(`   - Agents:   ${agentsCount}`);
   console.log(`   - Leads:    ${leadsCount}`);
+  console.log(`   - Users:    ${usersCount}`);
   console.log(`   - Settings: ${settingsMigrated ? 'Migrated' : 'Skipped'}`);
   console.log('========================================\n');
   process.exit(0);
