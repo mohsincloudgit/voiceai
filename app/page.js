@@ -22,6 +22,7 @@ export default function Dashboard() {
   // Filters & Search
   const [leadSearch, setLeadSearch] = useState('');
   const [agentFilter, setAgentFilter] = useState('all');
+  const [channelFilter, setChannelFilter] = useState('all');
 
   // Modals
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
@@ -305,16 +306,23 @@ export default function Dashboard() {
     }
   };
 
+  const voiceLeadsCount = leads.filter(l => !(l.leadSource === 'Text Chat' || l.channel === 'Text Message')).length;
+  const textLeadsCount = leads.filter(l => l.leadSource === 'Text Chat' || l.channel === 'Text Message').length;
+
   // Filtered Leads
   const filteredLeads = leads.filter(l => {
     const matchesAgent = agentFilter === 'all' || l.agentId === agentFilter;
+    const isLeadText = l.leadSource === 'Text Chat' || l.channel === 'Text Message';
+    const matchesChannel = channelFilter === 'all' ||
+      (channelFilter === 'voice' && !isLeadText) ||
+      (channelFilter === 'text' && isLeadText);
     const query = leadSearch.toLowerCase();
     const matchesSearch = !leadSearch ||
       (l.customerName && l.customerName.toLowerCase().includes(query)) ||
       (l.customerEmail && l.customerEmail.toLowerCase().includes(query)) ||
       (l.customerPhone && l.customerPhone.toLowerCase().includes(query)) ||
       (l.serviceName && l.serviceName.toLowerCase().includes(query));
-    return matchesAgent && matchesSearch;
+    return matchesAgent && matchesChannel && matchesSearch;
   });
 
   // Embed Snippets
@@ -560,6 +568,7 @@ export default function Dashboard() {
                   <thead>
                     <tr>
                       <th>Customer</th>
+                      <th>Channel</th>
                       <th>Service & Agent</th>
                       <th>Budget</th>
                       <th>Date</th>
@@ -571,8 +580,8 @@ export default function Dashboard() {
                   <tbody>
                     {leads.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
-                          No leads captured yet. Test the voice agent from the widget preview!
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                          No leads captured yet. Test the voice or text agent from the widget preview!
                         </td>
                       </tr>
                     ) : (
@@ -583,6 +592,17 @@ export default function Dashboard() {
                             <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                               {lead.customerEmail || ''} {lead.customerPhone ? `• ${lead.customerPhone}` : ''}
                             </div>
+                          </td>
+                          <td>
+                            {(lead.leadSource === 'Text Chat' || lead.channel === 'Text Message') ? (
+                              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                💬 Text Chat
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                                🎙️ Voice Call
+                              </span>
+                            )}
                           </td>
                           <td>
                             <span className="badge badge-purple">{lead.serviceName || 'Consultation'}</span>
@@ -601,7 +621,7 @@ export default function Dashboard() {
                           </td>
                           <td>
                             <span className="badge badge-gray">
-                              💬 {(lead.transcript || []).length} audio turns
+                              {(lead.leadSource === 'Text Chat' || lead.channel === 'Text Message') ? '💬' : '🎙️'} {(lead.transcript || []).length} turns
                             </span>
                           </td>
                           <td>
@@ -705,10 +725,19 @@ export default function Dashboard() {
               <div className="filter-group">
                 <label>Filter by Agent:</label>
                 <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
-                  <option value="all">All Voice Agents</option>
+                  <option value="all">All Agents</option>
                   {agents.map(a => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>Filter by Channel:</label>
+                <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
+                  <option value="all">All Channels (Voice & Text)</option>
+                  <option value="voice">🎙️ Voice Agent Calls</option>
+                  <option value="text">💬 Text Chat Messages</option>
                 </select>
               </div>
             </div>
@@ -719,6 +748,7 @@ export default function Dashboard() {
                   <thead>
                     <tr>
                       <th>Customer Details</th>
+                      <th>Channel</th>
                       <th>Service & Agent</th>
                       <th>Budget & Timeline</th>
                       <th>Summary</th>
@@ -730,7 +760,7 @@ export default function Dashboard() {
                   <tbody>
                     {filteredLeads.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                           No leads matching current filters.
                         </td>
                       </tr>
@@ -743,6 +773,17 @@ export default function Dashboard() {
                               ✉️ {lead.customerEmail || 'No email'}<br />
                               📞 {lead.customerPhone || 'No phone'}
                             </div>
+                          </td>
+                          <td>
+                            {(lead.leadSource === 'Text Chat' || lead.channel === 'Text Message') ? (
+                              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                                💬 Text Chat
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                                🎙️ Voice Call
+                              </span>
+                            )}
                           </td>
                           <td>
                             <span className="badge badge-purple">{lead.serviceName || 'Consultation'}</span>
@@ -1279,6 +1320,12 @@ export default function Dashboard() {
                 <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#94a3b8' }}>Service Requested</div>
                 <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff' }}>{selectedLead.serviceName || 'Consultation'}</div>
               </div>
+              <div style={{ background: '#0e1322', padding: '12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#94a3b8' }}>Lead Channel</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: (selectedLead.leadSource === 'Text Chat' || selectedLead.channel === 'Text Message') ? '#34d399' : '#818cf8' }}>
+                  {(selectedLead.leadSource === 'Text Chat' || selectedLead.channel === 'Text Message') ? '💬 Text Chat' : '🎙️ Voice Agent'}
+                </div>
+              </div>
             </div>
 
             {selectedLead.notes && (
@@ -1297,7 +1344,7 @@ export default function Dashboard() {
 
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>
-                💬 Full Audio Transcript ({(selectedLead.transcript || []).length} turns)
+                {(selectedLead.leadSource === 'Text Chat' || selectedLead.channel === 'Text Message') ? '💬' : '🎙️'} Full Conversation Transcript ({(selectedLead.transcript || []).length} turns &bull; {(selectedLead.leadSource === 'Text Chat' || selectedLead.channel === 'Text Message') ? 'Text Chat' : 'Voice Agent'})
               </div>
               <div style={{ maxHeight: '250px', overflowY: 'auto', background: '#090d16', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px' }}>
                 {(selectedLead.transcript || []).length === 0 ? (

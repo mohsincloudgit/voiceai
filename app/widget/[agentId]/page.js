@@ -7,9 +7,9 @@ export default function WidgetPage() {
   const params = useParams();
   const agentId = params?.agentId || 'agent_digital_agency';
 
-  // Agent State
+  // Agent & Active Mode State
   const [agent, setAgent] = useState(null);
-  const [activeView, setActiveView] = useState('voice'); // 'voice' | 'chat'
+  const [activeMode, setActiveMode] = useState('voice'); // 'voice' | 'text'
   const [isMuted, setIsMuted] = useState(false);
   const [voiceLang, setVoiceLang] = useState('ur-PK'); // 'ur-PK' | 'en-US' | 'hi-IN'
   const [isListening, setIsListening] = useState(false);
@@ -19,14 +19,13 @@ export default function WidgetPage() {
   // Subtitles & History
   const [subtitle, setSubtitle] = useState({
     speaker: 'AI Agent',
-    text: 'Hi there! Tap the microphone below to start talking, or ask me any question about our services.',
+    text: 'Hi there! Tap the microphone below to start talking, or switch to Text Chat to message with me.',
     time: 'Just now'
   });
   const [conversationHistory, setConversationHistory] = useState([]);
 
-  // Drawers
+  // Drawers & Inputs
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isTextDrawerOpen, setIsTextDrawerOpen] = useState(false);
   const [typedMessage, setTypedMessage] = useState('');
 
   // Lead Form Data
@@ -45,6 +44,7 @@ export default function WidgetPage() {
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
   const chatBottomRef = useRef(null);
+  const textInputRef = useRef(null);
 
   // Time formatter
   const getNowTime = () => {
@@ -120,7 +120,7 @@ export default function WidgetPage() {
           }
 
           if (finalTranscript) {
-            handleUserMessage(finalTranscript.trim());
+            handleUserMessage(finalTranscript.trim(), activeMode);
           }
         };
 
@@ -128,7 +128,7 @@ export default function WidgetPage() {
           console.warn('Speech recognition error:', event.error);
           setIsListening(false);
           setAgentState('idle');
-          setStatusText('Tap Mic to Speak');
+          setStatusText(activeMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
         };
 
         recog.onend = () => {
@@ -147,14 +147,14 @@ export default function WidgetPage() {
         try { recognitionRef.current.stop(); } catch (e) {}
       }
     };
-  }, []);
+  }, [activeMode, voiceLang]);
 
   // Scroll Chat to Bottom
   useEffect(() => {
-    if (activeView === 'chat' && chatBottomRef.current) {
+    if (activeMode === 'text' && chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversationHistory, activeView]);
+  }, [conversationHistory, activeMode, agentState]);
 
   // Speak Text via TTS
   const speakText = (text, agentObj = agent) => {
@@ -175,17 +175,17 @@ export default function WidgetPage() {
 
     utterance.onstart = () => {
       setAgentState('speaking');
-      setStatusText('Agent is speaking...');
+      setStatusText(activeMode === 'text' ? 'Agent speaking...' : 'Agent is speaking...');
     };
 
     utterance.onend = () => {
       setAgentState('idle');
-      setStatusText('Ready to Talk');
+      setStatusText(activeMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
     };
 
     utterance.onerror = () => {
       setAgentState('idle');
-      setStatusText('Ready to Talk');
+      setStatusText(activeMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
     };
 
     synthRef.current.speak(utterance);
@@ -194,7 +194,7 @@ export default function WidgetPage() {
   // Toggle Microphone
   const toggleMicrophone = () => {
     if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or use Type mode below.');
+      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge, or switch to Text Chat mode.');
       return;
     }
 
@@ -204,7 +204,7 @@ export default function WidgetPage() {
       } catch (e) {}
       setIsListening(false);
       setAgentState('idle');
-      setStatusText('Tap Mic to Speak');
+      setStatusText(activeMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
     } else {
       if (synthRef.current) synthRef.current.cancel();
       try {
@@ -213,6 +213,31 @@ export default function WidgetPage() {
       } catch (e) {
         console.warn('Recognition start error:', e);
       }
+    }
+  };
+
+  // Switch Mode Handler (Voice <-> Text)
+  const handleSwitchMode = (newMode) => {
+    if (newMode === activeMode) return;
+    setActiveMode(newMode);
+
+    // Cancel current speech/listening
+    if (isListening && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      setIsListening(false);
+    }
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    setAgentState('idle');
+
+    if (newMode === 'text') {
+      setStatusText('Ready to chat');
+      setTimeout(() => {
+        if (textInputRef.current) textInputRef.current.focus();
+      }, 150);
+    } else {
+      setStatusText('Ready to Talk');
     }
   };
 
@@ -233,8 +258,8 @@ export default function WidgetPage() {
     }
   };
 
-  // Handle User Utterance / Message
-  const handleUserMessage = async (text) => {
+  // Handle User Message (Shared for Voice & Text)
+  const handleUserMessage = async (text, currentMode = activeMode) => {
     if (!text.trim()) return;
 
     const userEntry = {
@@ -253,7 +278,7 @@ export default function WidgetPage() {
     });
 
     setAgentState('thinking');
-    setStatusText('AI is thinking...');
+    setStatusText(currentMode === 'text' ? 'AI is typing...' : 'AI is thinking...');
 
     try {
       const res = await fetch('/api/chat', {
@@ -262,7 +287,8 @@ export default function WidgetPage() {
         body: JSON.stringify({
           agentId: agent?.id || agentId,
           message: text,
-          conversationHistory: updatedHistory
+          conversationHistory: updatedHistory,
+          mode: currentMode
         })
       });
 
@@ -296,36 +322,48 @@ export default function WidgetPage() {
         // Automatic Booking Confirmation feedback
         if (data.bookingConfirmed) {
           setLeadSubmitted(true);
-          setStatusText(data.emailSent ? '🎉 Appointment Confirmed & Emailed!' : '🎉 Appointment Confirmed!');
+          const feedbackMsg = currentMode === 'text'
+            ? '🎉 Appointment Confirmed via Text! Details dispatched to your email.'
+            : (data.emailSent ? '🎉 Appointment Confirmed & Emailed!' : '🎉 Appointment Confirmed!');
+          setStatusText(feedbackMsg);
           setTimeout(() => {
             setLeadSubmitted(false);
           }, 8000);
         }
 
-        // Speak aloud
-        speakText(agentResponseText);
+        // In Voice mode or if sound unmuted in text mode, speak response
+        if (currentMode === 'voice' || !isMuted) {
+          speakText(agentResponseText);
+        } else {
+          setAgentState('idle');
+          setStatusText('Ready to chat');
+        }
       } else {
         setAgentState('idle');
-        setStatusText('Ready to Talk');
+        setStatusText(currentMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
       }
     } catch (err) {
       console.error('Chat API error:', err);
       setAgentState('idle');
-      setStatusText('Ready to Talk');
+      setStatusText(currentMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
     }
   };
 
   // Submit Typed Message
   const handleSendText = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!typedMessage.trim()) return;
     const msg = typedMessage;
     setTypedMessage('');
-    setIsTextDrawerOpen(false);
-    handleUserMessage(msg);
+    handleUserMessage(msg, 'text');
   };
 
-  // Submit Lead Form
+  // Quick Chips click handler
+  const handleQuickChip = (chipQuery) => {
+    handleUserMessage(chipQuery, 'text');
+  };
+
+  // Submit Lead Form Drawer
   const handleSubmitLead = async (e) => {
     e.preventDefault();
     setIsSubmittingLead(true);
@@ -338,19 +376,21 @@ export default function WidgetPage() {
           agentId: agent?.id || agentId,
           ...leadFormData,
           transcript: conversationHistory,
+          mode: activeMode,
+          leadSource: activeMode === 'text' ? 'Text Chat' : 'Voice Agent'
         })
       });
 
       const data = await res.json();
       if (data.success) {
         setLeadSubmitted(true);
-        const confirmMsg = "Thank you! I have confirmed your request and sent the full conversation transcript to your email.";
+        const confirmMsg = "Thank you! I have confirmed your request and sent the full transcript to your email.";
         setSubtitle({
           speaker: agent?.name || 'AI Agent',
           text: confirmMsg,
           time: getNowTime()
         });
-        speakText(confirmMsg);
+        if (!isMuted) speakText(confirmMsg);
 
         setTimeout(() => {
           setIsFormOpen(false);
@@ -366,21 +406,24 @@ export default function WidgetPage() {
     }
   };
 
+  const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+  const welcomeGreeting = agent?.welcomeMessage || 'Hi there! How can I assist you today? Feel free to talk or text!';
+
   return (
     <>
       <link rel="stylesheet" href="/css/widget.css" />
 
       <div className="widget-container" id="widgetRoot">
-        {/* Glowing Orbs */}
+        {/* Background Glowing Orbs */}
         <div className="orb orb-1"></div>
         <div className="orb orb-2"></div>
 
-        {/* Header */}
+        {/* Top Header */}
         <header className="widget-header">
           <div className="agent-profile">
             <div className="avatar-wrapper">
               <img
-                src={agent?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                src={agent?.avatar || defaultAvatar}
                 alt={agent?.name || 'Agent Avatar'}
                 className="agent-avatar"
               />
@@ -423,7 +466,8 @@ export default function WidgetPage() {
               <option value="en-US" style={{ background: '#0e1322', color: '#fff' }}>🇺🇸 English</option>
               <option value="hi-IN" style={{ background: '#0e1322', color: '#fff' }}>🇮🇳 Hindi</option>
             </select>
-            <button onClick={toggleMute} className="icon-btn" title={isMuted ? 'Unmute Speech' : 'Mute Speech'}>
+
+            <button onClick={toggleMute} className="icon-btn" title={isMuted ? 'Unmute Audio' : 'Mute Audio'}>
               {!isMuted ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -437,6 +481,7 @@ export default function WidgetPage() {
                 </svg>
               )}
             </button>
+
             <button onClick={handleClose} className="icon-btn" title="Minimize Widget">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -446,34 +491,38 @@ export default function WidgetPage() {
           </div>
         </header>
 
-        {/* Navigation Tabs */}
-        <nav className="view-tabs">
-          <button
-            className={`tab-btn ${activeView === 'voice' ? 'active' : ''}`}
-            onClick={() => setActiveView('voice')}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="22"></line>
-            </svg>
-            Live Voice
-          </button>
-          <button
-            className={`tab-btn ${activeView === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveView('chat')}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            Transcript ({conversationHistory.length})
-          </button>
-        </nav>
+        {/* PROMINENT DUAL-MODE SWITCHER (Voice Mode <--> Text Chat) */}
+        <div className="mode-switch-wrapper">
+          <div className="mode-switch-pill">
+            <button
+              type="button"
+              className={`mode-switch-btn ${activeMode === 'voice' ? 'active mode-voice' : ''}`}
+              onClick={() => handleSwitchMode('voice')}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+              Voice Mode 🎙️
+            </button>
+            <button
+              type="button"
+              className={`mode-switch-btn ${activeMode === 'text' ? 'active mode-text' : ''}`}
+              onClick={() => handleSwitchMode('text')}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Text Chat 💬
+            </button>
+          </div>
+        </div>
 
         {/* Body Area */}
         <main className="widget-body">
-          {/* VIEW 1: Live Voice Stage */}
-          {activeView === 'voice' && (
+          {/* ===================== MODE 1: LIVE VOICE MODE ===================== */}
+          {activeMode === 'voice' && (
             <section className="voice-view">
               {/* Status Pill */}
               <div className={`status-pill ${agentState === 'listening' ? 'state-listening' : agentState === 'thinking' ? 'state-thinking' : agentState === 'speaking' ? 'state-speaking' : ''}`}>
@@ -495,7 +544,7 @@ export default function WidgetPage() {
                 </div>
               </div>
 
-              {/* Live Subtitle Box */}
+              {/* Celebration Banner if Booking Confirmed */}
               {leadSubmitted && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35))',
@@ -509,9 +558,11 @@ export default function WidgetPage() {
                   marginBottom: '10px',
                   boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
                 }}>
-                  🎉 <strong>Booking Confirmed!</strong> Confirmation & details dispatched to your email.
+                  🎉 <strong>Booking Confirmed!</strong> Full transcript and details dispatched to your email.
                 </div>
               )}
+
+              {/* Live Subtitle Box */}
               <div className="live-subtitle-box">
                 <div className="live-speaker-label">
                   <span>{subtitle.speaker}</span>
@@ -524,28 +575,159 @@ export default function WidgetPage() {
             </section>
           )}
 
-          {/* VIEW 2: Chat Transcript History */}
-          {activeView === 'chat' && (
-            <section className="chat-view" style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
-              {conversationHistory.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px', fontSize: '13px' }}>
-                  No messages yet. Speak into the microphone or type below!
-                </div>
-              ) : (
-                conversationHistory.map((item, idx) => (
-                  <div key={idx} className={`chat-bubble ${item.role}`}>
-                    <div>{item.text}</div>
-                    <span className="bubble-time">
-                      {item.role === 'agent' ? (agent?.name || 'Agent') : 'You'} • {item.timestamp}
-                    </span>
+          {/* ===================== MODE 2: LIVE TEXT CHAT MODE ===================== */}
+          {activeMode === 'text' && (
+            <section className="text-chat-view">
+              {/* Chat Messages Thread */}
+              <div className="chat-messages-container">
+                {/* Initial Agent Welcome Greeting */}
+                <div className="chat-bubble-row agent">
+                  <img
+                    src={agent?.avatar || defaultAvatar}
+                    alt={agent?.name || 'Agent'}
+                    className="chat-row-avatar"
+                  />
+                  <div className="bubble-content">
+                    <div className="chat-bubble">
+                      {welcomeGreeting}
+                    </div>
+                    <div className="bubble-meta">
+                      {agent?.name || 'AI Assistant'} • {getNowTime()}
+                    </div>
                   </div>
-                ))
-              )}
-              <div ref={chatBottomRef}></div>
+                </div>
+
+                {/* Conversation Turns */}
+                {conversationHistory.map((item, idx) => (
+                  <div key={idx} className={`chat-bubble-row ${item.role}`}>
+                    {item.role === 'agent' && (
+                      <img
+                        src={agent?.avatar || defaultAvatar}
+                        alt="Agent"
+                        className="chat-row-avatar"
+                      />
+                    )}
+                    <div className="bubble-content">
+                      <div className="chat-bubble">
+                        {item.text}
+                      </div>
+                      <div className="bubble-meta">
+                        {item.role === 'agent' ? (agent?.name || 'AI') : 'You'} • {item.timestamp}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* AI Typing Indicator */}
+                {agentState === 'thinking' && (
+                  <div className="chat-bubble-row agent">
+                    <img
+                      src={agent?.avatar || defaultAvatar}
+                      alt="Agent"
+                      className="chat-row-avatar"
+                    />
+                    <div className="typing-bubble">
+                      <span className="typing-dot"></span>
+                      <span className="typing-dot"></span>
+                      <span className="typing-dot"></span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Banner in Chat */}
+                {leadSubmitted && (
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid #10b981',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    color: '#6ee7b7',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textAlign: 'center',
+                    margin: '8px 0'
+                  }}>
+                    🎉 <strong>Booking Confirmed via Text!</strong> Confirmation and details dispatched to your email.
+                  </div>
+                )}
+
+                <div ref={chatBottomRef}></div>
+              </div>
+
+              {/* Quick Suggestion Chips */}
+              <div className="quick-chips-wrapper">
+                <button
+                  type="button"
+                  className="quick-chip"
+                  onClick={() => handleQuickChip('Pricing aur packages kya hain?')}
+                >
+                  💰 Pricing & Packages
+                </button>
+                <button
+                  type="button"
+                  className="quick-chip"
+                  onClick={() => handleQuickChip('Mujhe consultation appointment book karni hai.')}
+                >
+                  📅 Book Appointment
+                </button>
+                <button
+                  type="button"
+                  className="quick-chip"
+                  onClick={() => handleQuickChip('Aap konsi services provide karte hain?')}
+                >
+                  ⚡ Services
+                </button>
+                <button
+                  type="button"
+                  className="quick-chip"
+                  onClick={() => setIsFormOpen(true)}
+                >
+                  📋 Lead Form
+                </button>
+              </div>
+
+              {/* Pinned Bottom Chat Bar */}
+              <form onSubmit={handleSendText} className="chat-input-bar">
+                <input
+                  ref={textInputRef}
+                  type="text"
+                  className="chat-input-field"
+                  placeholder="Type your message or query..."
+                  value={typedMessage}
+                  onChange={(e) => setTypedMessage(e.target.value)}
+                />
+
+                {/* Voice-to-text Mic Shortcut inside Text Bar */}
+                <button
+                  type="button"
+                  onClick={toggleMicrophone}
+                  className={`chat-mic-shortcut-btn ${isListening ? 'active' : ''}`}
+                  title={isListening ? 'Stop Listening' : 'Speak into Text'}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                  </svg>
+                </button>
+
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={!typedMessage.trim()}
+                  className="chat-send-btn"
+                  title="Send Message"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </form>
             </section>
           )}
 
-          {/* Slide-in Lead Confirmation Drawer */}
+          {/* Slide-in Lead Confirmation Drawer (Available from both modes) */}
           {isFormOpen && (
             <div className="confirmation-card active" style={{ display: 'block' }}>
               <div className="card-header">
@@ -554,7 +736,7 @@ export default function WidgetPage() {
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
                   </svg>
-                  Confirm & Send Convo to Email
+                  Confirm & Send Details to Email
                 </h5>
                 <button onClick={() => setIsFormOpen(false)} className="icon-btn" style={{ width: '24px', height: '24px' }}>
                   &times;
@@ -643,7 +825,7 @@ export default function WidgetPage() {
                       <line x1="22" y1="2" x2="11" y2="13"></line>
                       <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
-                    {isSubmittingLead ? 'Dispatching...' : 'Confirm & Email Complete Details'}
+                    {isSubmittingLead ? 'Dispatching...' : `Confirm & Email via ${activeMode === 'text' ? 'Text Chat' : 'Voice Agent'}`}
                   </button>
                 </form>
               )}
@@ -651,75 +833,52 @@ export default function WidgetPage() {
           )}
         </main>
 
-        {/* Text Drawer (Fallback Type Mode) */}
-        {isTextDrawerOpen && (
-          <form onSubmit={handleSendText} className="text-drawer active" style={{ display: 'flex' }}>
-            <input
-              type="text"
-              autoFocus
-              className="text-input"
-              placeholder="Type your question or message..."
-              value={typedMessage}
-              onChange={(e) => setTypedMessage(e.target.value)}
-            />
-            <button type="submit" className="send-msg-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        {/* Voice Mode Dedicated Footer Controls */}
+        {activeMode === 'voice' && (
+          <footer className="widget-footer">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(!isFormOpen)}
+              className="footer-btn"
+              title="Review or edit lead details"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              Confirm Form
+            </button>
+
+            {/* Center Mic Button */}
+            <button
+              type="button"
+              onClick={toggleMicrophone}
+              className={`mic-toggle-btn ${isListening ? 'active' : ''}`}
+              aria-label="Toggle Microphone"
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
               </svg>
             </button>
-          </form>
+
+            {/* Switch to Text Mode Shortcut */}
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('text')}
+              className="footer-btn"
+              title="Switch to Text Chat"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Chat Text
+            </button>
+          </footer>
         )}
-
-        {/* Footer Controls */}
-        <footer className="widget-footer">
-          <button
-            onClick={() => setIsFormOpen(!isFormOpen)}
-            className="footer-btn"
-            title="Review or edit lead details"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            Confirm Form
-          </button>
-
-          {/* Center Mic Button */}
-          <button
-            onClick={toggleMicrophone}
-            className={`mic-toggle-btn ${isListening ? 'active' : ''}`}
-            aria-label="Toggle Microphone"
-          >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="22"></line>
-            </svg>
-          </button>
-
-          {/* Keyboard Toggle */}
-          <button
-            onClick={() => setIsTextDrawerOpen(!isTextDrawerOpen)}
-            className="footer-btn"
-            title="Type instead of voice"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-              <line x1="6" y1="8" x2="6" y2="8"></line>
-              <line x1="10" y1="8" x2="10" y2="8"></line>
-              <line x1="14" y1="8" x2="14" y2="8"></line>
-              <line x1="18" y1="8" x2="18" y2="8"></line>
-              <line x1="6" y1="12" x2="6" y2="12"></line>
-              <line x1="18" y1="12" x2="18" y2="12"></line>
-              <line x1="10" y1="16" x2="14" y2="16"></line>
-            </svg>
-            Type
-          </button>
-        </footer>
       </div>
     </>
   );

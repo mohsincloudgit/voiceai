@@ -154,8 +154,8 @@ export default function DemoPage() {
       <main>
         <section className="demo-hero">
           <div className="demo-badge">✨ Live Website Footer Embed Demonstration</div>
-          <h1>High-Converting Web Apps & <span>AI Voice Agents</span></h1>
-          <p>This is a live example of an external client website. Look at the bottom-right corner: the AI Voice Sales Agent is active and ready to qualify leads!</p>
+          <h1>High-Converting Web Apps & <span>Voice / Text AI Agents</span></h1>
+          <p>This is a live example of an external client website. Look at the bottom-right corner: the AI Sales Agent is active with an instant switch between 🎙️ Voice Mode and 💬 Text Chat to qualify leads!</p>
           <div>
             <Link
               href="/"
@@ -181,7 +181,7 @@ export default function DemoPage() {
               <polyline points="16 18 22 12 16 6"></polyline>
               <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
-            How this Voice Agent was embedded into this website's footer:
+            How this Voice & Text Agent was embedded into this website's footer:
           </h4>
           <p style={{ fontSize: '13px', color: '#94a3b8' }}>
             Only a single line of code was placed right before <code>&lt;/body&gt;</code> in the website footer:
@@ -194,8 +194,8 @@ export default function DemoPage() {
 
         <section className="demo-grid" id="services">
           <div className="demo-card">
-            <h3>⚡ 24/7 AI Voice Answering</h3>
-            <p>Never miss a high-ticket customer call. The AI voice agent answers inquiries instantly with zero wait time.</p>
+            <h3>🎙️ Voice & 💬 Text Switch</h3>
+            <p>Customers can freely talk via microphone or type text messages. Switch anytime with a single tap while keeping full conversation context.</p>
           </div>
           <div className="demo-card">
             <h3>🎯 Custom Knowledge Base</h3>
@@ -203,7 +203,7 @@ export default function DemoPage() {
           </div>
           <div className="demo-card">
             <h3>📬 Instant Email Dispatch</h3>
-            <p>Sends full timestamped audio conversation transcripts, customer qualification details, and action items directly to your inbox.</p>
+            <p>Sends full timestamped conversation transcripts, customer qualification details, and action items directly to your inbox.</p>
           </div>
         </section>
       </main>

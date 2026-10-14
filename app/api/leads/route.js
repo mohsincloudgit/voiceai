@@ -24,7 +24,9 @@ export async function POST(request) {
       preferredTime,
       notes,
       transcript = [],
-      summary
+      summary,
+      mode = 'voice',
+      leadSource
     } = body;
 
     const agents = await getAgents();
@@ -36,9 +38,11 @@ export async function POST(request) {
       notificationEmail: settings.notificationEmail
     };
 
+    const sourceTag = leadSource || (mode === 'text' ? 'Text Chat' : 'Voice Agent');
+
     let finalSummary = summary;
     if (!finalSummary && transcript.length > 0) {
-      finalSummary = `Customer ${customerName || 'Inquirer'} engaged with ${agent.name} for ${agent.serviceName}. Exchanged ${transcript.length} voice messages and submitted their contact information for follow up.`;
+      finalSummary = `Customer ${customerName || 'Inquirer'} engaged with ${agent.name} for ${agent.serviceName} (${sourceTag}). Exchanged ${transcript.length} messages and submitted their contact information for follow up.`;
     }
 
     const newLead = {
@@ -52,8 +56,10 @@ export async function POST(request) {
       budget: budget || 'To be discussed',
       preferredTime: preferredTime || 'Flexible',
       notes: notes || '',
+      leadSource: sourceTag,
+      channel: sourceTag === 'Text Chat' ? 'Text Message' : 'Voice Call',
       status: 'Qualified',
-      summary: finalSummary || 'New voice inquiry received.',
+      summary: finalSummary || `New inquiry received via ${sourceTag}.`,
       transcript: transcript,
       emailSent: false,
       emailSentTo: '',
@@ -77,12 +83,12 @@ export async function POST(request) {
       const transporter = getEmailTransporter(settings);
 
       if (transporter && toAddresses) {
-        const mailOptions = {
-          from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${settings.smtpUser || 'noreply@crm-voice.com'}>`,
-          to: toAddresses,
-          subject: `🎙️ New Lead: ${customerName || 'Website Visitor'} - ${agent.serviceName}`,
-          html: generateLeadEmailHtml(newLead, agent)
-        };
+          const mailOptions = {
+            from: `"${settings.emailFromName || 'AI Voice Agent CRM'}" <${settings.smtpUser || 'noreply@crm-voice.com'}>`,
+            to: toAddresses,
+            subject: `${sourceTag === 'Text Chat' ? '💬' : '🎙️'} New ${sourceTag} Lead: ${customerName || 'Website Visitor'} - ${agent.serviceName}`,
+            html: generateLeadEmailHtml(newLead, agent)
+          };
 
         const info = await transporter.sendMail(mailOptions);
         console.log('Lead notification email sent successfully:', info.messageId);

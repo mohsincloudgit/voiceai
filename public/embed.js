@@ -42,7 +42,8 @@
   // Create Floating Action Button
   const btn = document.createElement('button');
   btn.id = 'ai-voice-trigger-btn';
-  btn.setAttribute('aria-label', 'Open AI Voice Agent');
+  btn.setAttribute('aria-label', 'Open AI Voice & Text Sales Assistant');
+  btn.title = 'Talk or Chat with AI';
   btn.style.cssText = `
     position: relative;
     width: 64px;
@@ -74,7 +75,7 @@
     opacity: 0.8;
   `;
 
-  // Audio / Mic Icon
+  // Audio / Mic & Chat Combined Icon
   btn.innerHTML = `
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -86,14 +87,14 @@
   // Badge notification
   const badge = document.createElement('div');
   badge.id = 'ai-voice-badge';
-  badge.innerText = 'Talk with AI';
+  badge.innerText = 'Talk / Chat';
   badge.style.cssText = `
     position: absolute;
     top: -12px;
     right: -6px;
     background: #10b981;
     color: white;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     padding: 3px 8px;
     border-radius: 12px;

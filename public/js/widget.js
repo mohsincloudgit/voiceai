@@ -9,31 +9,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const agentAvatar = document.getElementById('agentAvatar');
   const agentName = document.getElementById('agentName');
   const agentService = document.getElementById('agentService');
+  const voiceLangSelect = document.getElementById('voiceLangSelect');
   const muteBtn = document.getElementById('muteBtn');
   const soundOnIcon = document.getElementById('soundOnIcon');
   const soundOffIcon = document.getElementById('soundOffIcon');
   const closeWidgetBtn = document.getElementById('closeWidgetBtn');
-  
-  const tabVoiceBtn = document.getElementById('tabVoiceBtn');
-  const tabChatBtn = document.getElementById('tabChatBtn');
-  const voiceView = document.getElementById('voiceView');
-  const chatView = document.getElementById('chatView');
-  const transcriptCount = document.getElementById('transcriptCount');
 
+  // Mode Switcher Elements
+  const switchVoiceBtn = document.getElementById('switchVoiceBtn');
+  const switchTextBtn = document.getElementById('switchTextBtn');
+  const voiceView = document.getElementById('voiceView');
+  const textChatView = document.getElementById('textChatView');
+  const voiceFooter = document.getElementById('voiceFooter');
+  const footerSwitchTextBtn = document.getElementById('footerSwitchTextBtn');
+
+  // Voice View Elements
   const visualizerStage = document.getElementById('visualizerStage');
   const statusPill = document.getElementById('statusPill');
   const statusLabel = document.getElementById('statusLabel');
   const liveSpeaker = document.getElementById('liveSpeaker');
   const liveTime = document.getElementById('liveTime');
   const liveSubtitleText = document.getElementById('liveSubtitleText');
-
   const micToggleBtn = document.getElementById('micToggleBtn');
-  const toggleKeyboardBtn = document.getElementById('toggleKeyboardBtn');
   const openFormBtn = document.getElementById('openFormBtn');
-  const textDrawer = document.getElementById('textDrawer');
-  const textInput = document.getElementById('textInput');
-  const sendTextBtn = document.getElementById('sendTextBtn');
 
+  // Text Chat View Elements
+  const chatMessagesContainer = document.getElementById('chatMessagesContainer');
+  const chatInputBar = document.getElementById('chatInputBar');
+  const chatInputField = document.getElementById('chatInputField');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+  const chatMicShortcutBtn = document.getElementById('chatMicShortcutBtn');
+  const chipOpenForm = document.getElementById('chipOpenForm');
+
+  // Lead Form Elements
   const confirmationCard = document.getElementById('confirmationCard');
   const closeConfirmCardBtn = document.getElementById('closeConfirmCardBtn');
   const leadSubmissionForm = document.getElementById('leadSubmissionForm');
@@ -44,19 +52,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const leadTime = document.getElementById('leadTime');
   const leadNotes = document.getElementById('leadNotes');
   const submitLeadBtn = document.getElementById('submitLeadBtn');
+  const submitLeadBtnText = document.getElementById('submitLeadBtnText');
   const successBanner = document.getElementById('successBanner');
 
   // State
   let currentAgent = null;
+  let currentMode = 'voice'; // 'voice' | 'text'
   let isMuted = false;
   let isListening = false;
   let isSpeaking = false;
-  let conversationHistory = []; // { role: 'agent'|'customer', text, timestamp }
+  let conversationHistory = [];
   let recognition = null;
   let synth = window.speechSynthesis || null;
   let availableVoices = [];
 
-  // Voice synthesis voice selector
+  const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+
+  // Format current time
+  function getNowTime() {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Load Voices
   function loadVoices() {
     if (!synth) return;
     availableVoices = synth.getVoices();
@@ -70,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Visualizer States: 'idle' | 'listening' | 'thinking' | 'speaking'
   function setAgentState(state, label) {
+    if (!visualizerStage || !statusPill) return;
     visualizerStage.className = 'visualizer-stage';
     statusPill.className = 'status-pill';
 
@@ -77,109 +96,151 @@ document.addEventListener('DOMContentLoaded', () => {
       visualizerStage.classList.add('state-listening');
       statusPill.classList.add('state-listening');
       statusLabel.textContent = label || 'Listening to you...';
-      micToggleBtn.classList.add('active');
+      if (micToggleBtn) micToggleBtn.classList.add('active');
+      if (chatMicShortcutBtn) chatMicShortcutBtn.classList.add('active');
     } else if (state === 'thinking') {
       visualizerStage.classList.add('state-thinking');
       statusPill.classList.add('state-thinking');
-      statusLabel.textContent = label || 'AI is thinking...';
-      micToggleBtn.classList.remove('active');
+      statusLabel.textContent = label || (currentMode === 'text' ? 'AI is typing...' : 'AI is thinking...');
+      if (micToggleBtn) micToggleBtn.classList.remove('active');
+      if (chatMicShortcutBtn) chatMicShortcutBtn.classList.remove('active');
     } else if (state === 'speaking') {
       visualizerStage.classList.add('state-speaking');
       statusPill.classList.add('state-speaking');
-      statusLabel.textContent = label || 'Agent is speaking...';
-      micToggleBtn.classList.remove('active');
+      statusLabel.textContent = label || `${currentAgent?.name || 'Agent'} is speaking...`;
+      if (micToggleBtn) micToggleBtn.classList.remove('active');
+      if (chatMicShortcutBtn) chatMicShortcutBtn.classList.remove('active');
     } else {
-      statusLabel.textContent = label || 'Tap Mic to Speak';
-      micToggleBtn.classList.remove('active');
+      statusLabel.textContent = label || (currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
+      if (micToggleBtn) micToggleBtn.classList.remove('active');
+      if (chatMicShortcutBtn) chatMicShortcutBtn.classList.remove('active');
     }
   }
 
-  // Format current time HH:MM
-  function getNowTime() {
-    const d = new Date();
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Update Live Subtitle Box
+  // Update Subtitle
   function updateSubtitle(speaker, text) {
+    if (!liveSpeaker || !liveSubtitleText) return;
     liveSpeaker.textContent = speaker;
-    liveTime.textContent = getNowTime();
+    if (liveTime) liveTime.textContent = getNowTime();
     liveSubtitleText.textContent = `"${text}"`;
   }
 
-  // Add message to chat view and memory
-  function addMessage(role, text) {
-    const time = getNowTime();
-    conversationHistory.push({ role, text, timestamp: time });
-    transcriptCount.textContent = conversationHistory.length;
+  // Add message bubble to chat view
+  function renderMessageBubble(role, text, time) {
+    if (!chatMessagesContainer) return;
+    const msgTime = time || getNowTime();
+    const row = document.createElement('div');
+    row.className = `chat-bubble-row ${role}`;
 
-    const bubble = document.createElement('div');
-    bubble.className = `chat-bubble ${role}`;
-    bubble.innerHTML = `
-      <div>${text}</div>
-      <span class="bubble-time">${role === 'agent' ? (currentAgent?.name || 'Agent') : 'You'} &bull; ${time}</span>
+    const isAgent = role === 'agent';
+    const avatarHtml = isAgent
+      ? `<img src="${currentAgent?.avatar || defaultAvatar}" alt="Agent" class="chat-row-avatar">`
+      : '';
+
+    row.innerHTML = `
+      ${avatarHtml}
+      <div class="bubble-content">
+        <div class="chat-bubble">${text}</div>
+        <div class="bubble-meta">${isAgent ? (currentAgent?.name || 'AI') : 'You'} &bull; ${msgTime}</div>
+      </div>
     `;
-    chatView.appendChild(bubble);
-    chatView.scrollTop = chatView.scrollHeight;
 
-    // Check for contact details extracted
-    extractLeadDetailsFromText(text);
+    chatMessagesContainer.appendChild(row);
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
   }
 
-  // Regex parser to auto-fill form as user speaks
-  function extractLeadDetailsFromText(text) {
-    if (!text) return;
-    // Email regex
-    const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-    if (emailMatch && !leadEmail.value) {
-      leadEmail.value = emailMatch[0];
-      highlightInput(leadEmail);
+  // Typing indicator
+  let typingBubbleEl = null;
+  function showTypingIndicator() {
+    if (typingBubbleEl || !chatMessagesContainer) return;
+    typingBubbleEl = document.createElement('div');
+    typingBubbleEl.className = 'chat-bubble-row agent';
+    typingBubbleEl.innerHTML = `
+      <img src="${currentAgent?.avatar || defaultAvatar}" alt="Agent" class="chat-row-avatar">
+      <div class="typing-bubble">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>
+    `;
+    chatMessagesContainer.appendChild(typingBubbleEl);
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    if (typingBubbleEl && typingBubbleEl.parentNode) {
+      typingBubbleEl.parentNode.removeChild(typingBubbleEl);
     }
-    // Phone regex
-    const phoneMatch = text.match(/(\+?[0-9]{1,4}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?[\d]{3}[-.\s]?[\d]{4}/);
-    if (phoneMatch && !leadPhone.value && phoneMatch[0].length >= 7) {
-      leadPhone.value = phoneMatch[0].trim();
-      highlightInput(leadPhone);
+    typingBubbleEl = null;
+  }
+
+  // Switch Mode (Voice vs Text)
+  function setMode(mode) {
+    currentMode = mode;
+
+    // Stop ongoing recognition and speech
+    if (isListening && recognition) {
+      try { recognition.stop(); } catch (e) {}
+      isListening = false;
     }
-    // Name regex patterns (e.g. "my name is Alex", "I am Tariq")
-    const nameMatch = text.match(/(?:my name is|i am|this is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-    if (nameMatch && nameMatch[1] && !leadName.value) {
-      leadName.value = nameMatch[1].trim();
-      highlightInput(leadName);
+    if (synth) {
+      synth.cancel();
+    }
+    setAgentState('idle');
+
+    if (mode === 'text') {
+      switchTextBtn.className = 'mode-switch-btn active mode-text';
+      switchVoiceBtn.className = 'mode-switch-btn';
+      voiceView.style.display = 'none';
+      if (voiceFooter) voiceFooter.style.display = 'none';
+      textChatView.style.display = 'flex';
+      if (submitLeadBtnText) submitLeadBtnText.textContent = 'Confirm & Email via Text Chat';
+
+      // Focus input
+      setTimeout(() => {
+        if (chatInputField) chatInputField.focus();
+        if (chatMessagesContainer) chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+      }, 100);
+    } else {
+      switchVoiceBtn.className = 'mode-switch-btn active mode-voice';
+      switchTextBtn.className = 'mode-switch-btn';
+      textChatView.style.display = 'none';
+      voiceView.style.display = 'flex';
+      if (voiceFooter) voiceFooter.style.display = 'flex';
+      if (submitLeadBtnText) submitLeadBtnText.textContent = 'Confirm & Email via Voice Agent';
     }
   }
 
-  function highlightInput(inputEl) {
-    inputEl.style.borderColor = '#10b981';
-    inputEl.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.4)';
-    setTimeout(() => {
-      inputEl.style.borderColor = '';
-      inputEl.style.boxShadow = '';
-    }, 2000);
+  if (switchVoiceBtn) switchVoiceBtn.addEventListener('click', () => setMode('voice'));
+  if (switchTextBtn) switchTextBtn.addEventListener('click', () => setMode('text'));
+  if (footerSwitchTextBtn) footerSwitchTextBtn.addEventListener('click', () => setMode('text'));
+
+  // Language change
+  if (voiceLangSelect) {
+    voiceLangSelect.addEventListener('change', (e) => {
+      if (recognition) recognition.lang = e.target.value;
+    });
   }
 
-  // Speak AI text out loud using browser SpeechSynthesis
+  // Speak AI text
   function speakText(text, callback) {
     if (isMuted || !synth) {
       if (callback) callback();
       return;
     }
 
-    synth.cancel(); // Stop any pending speech
-
+    synth.cancel();
     const cleanText = text.replace(/[*_#`~]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Pick a natural voice (prefer Google, Microsoft Natural, Samantha, or any English voice)
     if (availableVoices.length > 0) {
-      const preferred = availableVoices.find(v => 
+      const preferred = availableVoices.find(v =>
         (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Jenny')) && v.lang.startsWith('en')
       ) || availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
-
       if (preferred) utterance.voice = preferred;
     }
 
-    utterance.rate = 1.05;
+    utterance.rate = 1.02;
     utterance.pitch = 1.0;
 
     utterance.onstart = () => {
@@ -189,33 +250,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     utterance.onend = () => {
       isSpeaking = false;
-      setAgentState('idle', 'Tap Mic to Speak');
+      setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
       if (callback) callback();
     };
 
     utterance.onerror = (e) => {
-      console.warn('Speech synthesis error:', e);
+      console.warn('Speech error:', e);
       isSpeaking = false;
-      setAgentState('idle', 'Tap Mic to Speak');
+      setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
       if (callback) callback();
     };
 
     synth.speak(utterance);
   }
 
-  // Initialize Speech Recognition (STT)
+  // Speech Recognition
   function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn('Web Speech Recognition API not supported in this browser.');
-      statusLabel.textContent = 'Voice not supported (use Type)';
+      console.warn('Speech recognition not supported.');
       return;
     }
 
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    recognition.lang = voiceLangSelect ? voiceLangSelect.value : 'ur-PK';
 
     recognition.onstart = () => {
       isListening = true;
@@ -241,54 +301,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (finalTranscript) {
         const userText = finalTranscript.trim();
-        updateSubtitle('You', userText);
-        addMessage('customer', userText);
-        sendUserMessageToAI(userText);
+        handleUserMessage(userText);
       }
     };
 
-    recognition.onerror = (event) => {
-      console.log('Speech recognition event:', event.error);
+    recognition.onerror = () => {
       isListening = false;
-      setAgentState('idle', 'Tap Mic to Speak');
+      setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
     };
 
     recognition.onend = () => {
       isListening = false;
       if (!isSpeaking) {
-        setAgentState('idle', 'Tap Mic to Speak');
+        setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
       }
     };
   }
+  initSpeechRecognition();
 
-  function toggleListening() {
+  function toggleMic() {
     if (!recognition) {
-      initSpeechRecognition();
-      if (!recognition) {
-        alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari, or use the "Type" button.');
-        return;
-      }
+      alert('Speech recognition is not supported in this browser. Please use Chrome/Edge or switch to Text Chat mode.');
+      return;
     }
 
     if (isListening) {
-      recognition.stop();
+      try { recognition.stop(); } catch (e) {}
       isListening = false;
-      setAgentState('idle', 'Tap Mic to Speak');
+      setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Tap Mic to Speak');
     } else {
-      if (synth && synth.speaking) synth.cancel();
+      if (synth) synth.cancel();
       try {
+        if (voiceLangSelect) recognition.lang = voiceLangSelect.value;
         recognition.start();
       } catch (err) {
-        console.warn('Recognition start error:', err);
+        console.warn('Mic start error:', err);
       }
     }
   }
 
-  // Send User Message to AI Backend (/api/chat)
-  async function sendUserMessageToAI(message) {
-    if (!message) return;
+  if (micToggleBtn) micToggleBtn.addEventListener('click', toggleMic);
+  if (chatMicShortcutBtn) chatMicShortcutBtn.addEventListener('click', toggleMic);
 
-    setAgentState('thinking', 'AI is thinking...');
+  // Send message to AI backend
+  async function handleUserMessage(userText) {
+    if (!userText || !userText.trim()) return;
+
+    const time = getNowTime();
+    conversationHistory.push({ role: 'customer', text: userText, timestamp: time });
+    updateSubtitle('You', userText);
+    renderMessageBubble('customer', userText, time);
+
+    setAgentState('thinking', currentMode === 'text' ? 'AI is typing...' : 'AI is thinking...');
+    if (currentMode === 'text') showTypingIndicator();
 
     try {
       const res = await fetch('/api/chat', {
@@ -296,234 +361,193 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: currentAgent?.id || agentId,
-          message: message,
-          conversationHistory: conversationHistory
+          message: userText,
+          conversationHistory: conversationHistory,
+          mode: currentMode
         })
       });
 
       const data = await res.json();
+      hideTypingIndicator();
 
       if (data.success && data.response) {
         const agentReply = data.response;
-        updateSubtitle(currentAgent?.name || 'Agent', agentReply);
-        addMessage('agent', agentReply);
+        const agentTime = getNowTime();
+        conversationHistory.push({ role: 'agent', text: agentReply, timestamp: agentTime });
 
-        // Check if agent suggested closing / confirmation -> slide in confirmation card
-        const lowerReply = agentReply.toLowerCase();
-        if (
-          lowerReply.includes('email') ||
-          lowerReply.includes('phone') ||
-          lowerReply.includes('confirm') ||
-          lowerReply.includes('consultation') ||
-          lowerReply.includes('booking') ||
-          lowerReply.includes('lock in')
-        ) {
-          openConfirmationCard();
+        updateSubtitle(currentAgent?.name || 'AI Agent', agentReply);
+        renderMessageBubble('agent', agentReply, agentTime);
+
+        // Pre-fill form if info detected
+        if (data.detectedInfo) {
+          if (data.detectedInfo.name && !leadName.value) leadName.value = data.detectedInfo.name;
+          if (data.detectedInfo.email && !leadEmail.value) leadEmail.value = data.detectedInfo.email;
+          if (data.detectedInfo.phone && !leadPhone.value) leadPhone.value = data.detectedInfo.phone;
         }
 
-        // Speak aloud
-        speakText(agentReply);
+        if (data.bookingConfirmed) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; border-radius: 12px; padding: 12px 14px; color: #6ee7b7; font-size: 12px; font-weight: 600; text-align: center; margin: 8px 0;';
+          banner.innerHTML = `🎉 <strong>Booking Confirmed via ${currentMode === 'text' ? 'Text Chat' : 'Voice Agent'}!</strong> Full transcript and details dispatched to your email.`;
+          chatMessagesContainer.appendChild(banner);
+          chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        // Speak aloud in voice mode, or in text mode if not muted
+        if (currentMode === 'voice' || !isMuted) {
+          speakText(agentReply);
+        } else {
+          setAgentState('idle', 'Ready to chat');
+        }
       } else {
-        const fallback = "I'm having a slight connection glitch, but I'd love to help you book our service. Feel free to confirm your email in the form below!";
-        updateSubtitle(currentAgent?.name || 'Agent', fallback);
-        addMessage('agent', fallback);
-        speakText(fallback);
+        setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
       }
     } catch (err) {
-      console.error('Chat API Error:', err);
-      const errText = "I heard you! Let's lock in your requirements. Please confirm your contact details in the form so we can email you the full proposal.";
-      updateSubtitle(currentAgent?.name || 'Agent', errText);
-      addMessage('agent', errText);
-      speakText(errText);
-      openConfirmationCard();
+      console.error('Chat API error:', err);
+      hideTypingIndicator();
+      setAgentState('idle', currentMode === 'text' ? 'Ready to chat' : 'Ready to Talk');
     }
   }
 
-  // Load Agent Data from API
+  // Handle Text Chat Submission
+  if (chatInputBar) {
+    chatInputBar.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = chatInputField.value.trim();
+      if (!val) return;
+      chatInputField.value = '';
+      handleUserMessage(val);
+    });
+  }
+
+  // Quick Chips click handler
+  document.querySelectorAll('.quick-chip[data-chip]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const query = chip.getAttribute('data-chip');
+      if (query) handleUserMessage(query);
+    });
+  });
+
+  if (chipOpenForm) {
+    chipOpenForm.addEventListener('click', () => {
+      confirmationCard.classList.add('open');
+    });
+  }
+
+  // Lead Form Drawer Handlers
+  if (openFormBtn) {
+    openFormBtn.addEventListener('click', () => {
+      confirmationCard.classList.add('open');
+    });
+  }
+
+  if (closeConfirmCardBtn) {
+    closeConfirmCardBtn.addEventListener('click', () => {
+      confirmationCard.classList.remove('open');
+    });
+  }
+
+  if (leadSubmissionForm) {
+    leadSubmissionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitLeadBtn.disabled = true;
+      submitLeadBtn.textContent = 'Dispatching...';
+
+      const payload = {
+        agentId: currentAgent?.id || agentId,
+        customerName: leadName.value.trim(),
+        customerPhone: leadPhone.value.trim(),
+        customerEmail: leadEmail.value.trim(),
+        budget: leadBudget.value.trim(),
+        preferredTime: leadTime.value.trim(),
+        notes: leadNotes.value.trim(),
+        transcript: conversationHistory,
+        mode: currentMode,
+        leadSource: currentMode === 'text' ? 'Text Chat' : 'Voice Agent'
+      };
+
+      try {
+        const res = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          successBanner.style.display = 'block';
+          leadSubmissionForm.style.display = 'none';
+          const confirmText = 'Thank you! Your inquiry details and full conversation transcript have been sent to your email.';
+          updateSubtitle(currentAgent?.name || 'AI Agent', confirmText);
+          if (!isMuted) speakText(confirmText);
+
+          setTimeout(() => {
+            confirmationCard.classList.remove('open');
+            successBanner.style.display = 'none';
+            leadSubmissionForm.style.display = 'block';
+            submitLeadBtn.disabled = false;
+            submitLeadBtn.textContent = 'Confirm & Email Details';
+          }, 3500);
+        } else {
+          alert('Submission error: ' + (data.error || 'Server error'));
+          submitLeadBtn.disabled = false;
+          submitLeadBtn.textContent = 'Confirm & Email Details';
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+        submitLeadBtn.disabled = false;
+        submitLeadBtn.textContent = 'Confirm & Email Details';
+      }
+    });
+  }
+
+  // Mute / Unmute
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      isMuted = !isMuted;
+      if (isMuted) {
+        soundOnIcon.style.display = 'none';
+        soundOffIcon.style.display = 'block';
+        if (synth) synth.cancel();
+        setAgentState('idle');
+      } else {
+        soundOnIcon.style.display = 'block';
+        soundOffIcon.style.display = 'none';
+      }
+    });
+  }
+
+  // Close widget
+  if (closeWidgetBtn) {
+    closeWidgetBtn.addEventListener('click', () => {
+      window.parent.postMessage({ type: 'AI_VOICE_AGENT_CLOSE' }, '*');
+    });
+  }
+
+  // Fetch agent details
   async function loadAgent() {
     try {
       const res = await fetch(`/api/agents/${agentId}`);
       const data = await res.json();
-
       if (data.success && data.agent) {
         currentAgent = data.agent;
-        applyAgentBranding(currentAgent);
-      } else {
-        // Fallback default
-        currentAgent = {
-          id: 'agent_digital_agency',
-          name: 'Alex - Growth Advisor',
-          serviceName: 'Web & AI Voice Solutions',
-          primaryColor: '#6366f1',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          welcomeMessage: "Hi there! I am Alex. We build high-converting websites and AI voice agents that 3x sales. Are you looking to build a new website or automate your lead calls?"
-        };
-        applyAgentBranding(currentAgent);
+        if (agentName) agentName.textContent = currentAgent.name;
+        if (agentService) agentService.textContent = currentAgent.serviceName;
+        if (agentAvatar && currentAgent.avatar) agentAvatar.src = currentAgent.avatar;
+
+        const welcome = currentAgent.welcomeMessage || 'Hi there! How can I assist you today? Feel free to talk or text!';
+        updateSubtitle(currentAgent.name, welcome);
+
+        // Initial agent message in chat thread
+        renderMessageBubble('agent', welcome, getNowTime());
+
+        setTimeout(() => {
+          speakText(welcome);
+        }, 800);
       }
-
-      // Initial Greeting
-      const welcome = currentAgent.welcomeMessage || `Hello! I'm ${currentAgent.name}. How can I assist you with ${currentAgent.serviceName} today?`;
-      updateSubtitle(currentAgent.name, welcome);
-      addMessage('agent', welcome);
-      
-      // Auto-speak greeting after a short friendly delay
-      setTimeout(() => {
-        speakText(welcome);
-      }, 600);
-
     } catch (err) {
       console.error('Failed to load agent:', err);
     }
   }
 
-  function applyAgentBranding(agent) {
-    if (agent.name) agentName.textContent = agent.name;
-    if (agent.serviceName) agentService.textContent = agent.serviceName;
-    if (agent.avatar) agentAvatar.src = agent.avatar;
-
-    if (agent.primaryColor) {
-      document.documentElement.style.setProperty('--primary', agent.primaryColor);
-      document.documentElement.style.setProperty('--primary-glow', `${agent.primaryColor}66`);
-    }
-  }
-
-  // Form Submission (Saves Lead + Sends Rich Email with Full Transcript)
-  leadSubmissionForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    submitLeadBtn.disabled = true;
-    submitLeadBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>
-      Sending Email & Transcript...
-    `;
-
-    const payload = {
-      agentId: currentAgent?.id || agentId,
-      customerName: leadName.value.trim(),
-      customerEmail: leadEmail.value.trim(),
-      customerPhone: leadPhone.value.trim(),
-      budget: leadBudget.value.trim(),
-      preferredTime: leadTime.value.trim(),
-      notes: leadNotes.value.trim(),
-      transcript: conversationHistory,
-      summary: `Lead confirmed via voice agent for ${currentAgent?.serviceName || 'Service'}. Customer requested confirmation and complete transcript sent to ${leadEmail.value.trim()}.`
-    };
-
-    try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        successBanner.style.display = 'block';
-        leadSubmissionForm.style.display = 'none';
-
-        const successMsg = `Thank you ${payload.customerName}! Your confirmation has been locked in. The complete conversation transcript and requirements have been dispatched to your email.`;
-        updateSubtitle(currentAgent?.name || 'Agent', successMsg);
-        addMessage('agent', successMsg);
-        speakText(successMsg);
-
-        setTimeout(() => {
-          confirmationCard.classList.remove('open');
-        }, 4000);
-      } else {
-        alert('Could not submit form: ' + (data.error || 'Server error'));
-        submitLeadBtn.disabled = false;
-        submitLeadBtn.textContent = 'Try Again';
-      }
-    } catch (err) {
-      console.error('Lead submission failed:', err);
-      alert('Error submitting details: ' + err.message);
-      submitLeadBtn.disabled = false;
-      submitLeadBtn.textContent = 'Confirm & Email Complete Details';
-    }
-  });
-
-  // UI Event Handlers
-  micToggleBtn.addEventListener('click', toggleListening);
-
-  // Mute / Unmute
-  muteBtn.addEventListener('click', () => {
-    isMuted = !isMuted;
-    if (isMuted) {
-      if (synth && synth.speaking) synth.cancel();
-      soundOnIcon.style.display = 'none';
-      soundOffIcon.style.display = 'block';
-      statusLabel.textContent = 'Voice Muted (Audio Off)';
-    } else {
-      soundOnIcon.style.display = 'block';
-      soundOffIcon.style.display = 'none';
-      statusLabel.textContent = 'Voice Unmuted';
-    }
-  });
-
-  // Close / Minimize Modal
-  closeWidgetBtn.addEventListener('click', () => {
-    if (synth && synth.speaking) synth.cancel();
-    if (isListening && recognition) recognition.stop();
-    // Post message to parent window if running inside iframe
-    window.parent.postMessage({ type: 'AI_VOICE_AGENT_CLOSE' }, '*');
-  });
-
-  // Tab Switching
-  tabVoiceBtn.addEventListener('click', () => {
-    tabVoiceBtn.classList.add('active');
-    tabChatBtn.classList.remove('active');
-    voiceView.style.display = 'flex';
-    chatView.style.display = 'none';
-  });
-
-  tabChatBtn.addEventListener('click', () => {
-    tabChatBtn.classList.add('active');
-    tabVoiceBtn.classList.remove('active');
-    voiceView.style.display = 'none';
-    chatView.style.display = 'flex';
-  });
-
-  // Keyboard Drawer Toggle
-  toggleKeyboardBtn.addEventListener('click', () => {
-    textDrawer.classList.toggle('open');
-    if (textDrawer.classList.contains('open')) {
-      textInput.focus();
-    }
-  });
-
-  // Send Text Message
-  function handleSendText() {
-    const text = textInput.value.trim();
-    if (!text) return;
-
-    textInput.value = '';
-    textDrawer.classList.remove('open');
-
-    updateSubtitle('You', text);
-    addMessage('customer', text);
-    sendUserMessageToAI(text);
-  }
-
-  sendTextBtn.addEventListener('click', handleSendText);
-  textInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleSendText();
-  });
-
-  // Confirmation Card Open/Close
-  function openConfirmationCard() {
-    confirmationCard.classList.add('open');
-  }
-
-  openFormBtn.addEventListener('click', () => {
-    confirmationCard.classList.toggle('open');
-  });
-
-  closeConfirmCardBtn.addEventListener('click', () => {
-    confirmationCard.classList.remove('open');
-  });
-
-  // Initialize
-  initSpeechRecognition();
   loadAgent();
 });
