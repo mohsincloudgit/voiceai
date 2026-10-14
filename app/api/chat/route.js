@@ -34,7 +34,7 @@ function extractName(text, previousAgentQuestion = '') {
   if (!text) return null;
   const stopWords = new Set([
     'hai', 'hei', 'hun', 'hoon', 'mera', 'meri', 'naam', 'name', 'contact', 'number',
-    'phone', 'call', 'karo', 'karna', 'kardo', 'whatsapp', 'website', 'chahiye', 'need',
+    'phone', 'call', 'karo', 'karna', 'kardo', 'whatsapp', 'website', 'wesite', 'chahiye', 'need',
     'salam', 'hello', 'hi', 'bhai', 'sir', 'yes', 'no', 'theek', 'thik', 'done', 'email',
     'aur', 'and', 'apka', 'aapka', 'shubh', 'jee', 'ji', 'g'
   ]);
@@ -73,26 +73,43 @@ function extractRequirement(text) {
   const lower = text.toLowerCase();
   const res = { category: null, features: [], budget: null, timeline: null, rawText: text };
 
-  if (lower.includes('e-commerce') || lower.includes('ecommerce') || lower.includes('online store') || lower.includes('shop')) {
+  if (lower.includes('ghl') || lower.includes('gohighlevel')) {
+    res.category = 'GoHighLevel (GHL) CRM & Automations';
+    res.features.push('GHL CRM Automation');
+  } else if (lower.includes('shopify')) {
+    res.category = 'Shopify E-Commerce Store';
+    res.features.push('Shopify Store');
+  } else if (lower.includes('wordpress') || lower.includes('woocommerce')) {
+    res.category = 'WordPress & WooCommerce Development';
+    res.features.push('WordPress Development');
+  } else if (lower.includes('e-commerce') || lower.includes('ecommerce') || lower.includes('online store') || lower.includes('shop')) {
     res.category = 'E-Commerce Website';
+    res.features.push('E-Commerce Store');
   } else if (lower.includes('crm') || lower.includes('cms') || lower.includes('portal') || lower.includes('dashboard')) {
-    res.category = 'Custom CRM / CMS Portal';
-  } else if (lower.includes('portfolio') || lower.includes('corporate') || lower.includes('business website') || lower.includes('landing page')) {
-    res.category = 'Business Website';
-  } else if (lower.includes('voice agent') || lower.includes('ai voice') || lower.includes('automation')) {
-    res.category = 'AI Voice Agent';
-  } else if (lower.includes('website') || lower.includes('web development')) {
-    res.category = 'Website Development';
+    res.category = 'Custom CMS & CRM Portal';
+    res.features.push('CMS/CRM Portal');
+  } else if (lower.includes('automation') || lower.includes('ai agent') || lower.includes('voice agent')) {
+    res.category = 'AI Automation & Agents';
+    res.features.push('AI Automation');
+  } else if (lower.includes('wesite') || lower.includes('website') || lower.includes('web build') || lower.includes('web development') || lower.includes('web')) {
+    res.category = 'Website Build & Development';
   }
 
-  if (lower.includes('payment') || lower.includes('gateway') || lower.includes('stripe') || lower.includes('easypaisa') || lower.includes('jazzcash')) {
-    res.features.push('Payment Gateway');
+  // Features & Additional Details
+  if (lower.includes('payment') || lower.includes('gateway') || lower.includes('stripe') || lower.includes('paypal') || lower.includes('easypaisa') || lower.includes('jazzcash')) {
+    if (!res.features.includes('Payment Gateway Integration')) res.features.push('Payment Gateway Integration');
   }
-  if (lower.includes('seo') || lower.includes('ranking') || lower.includes('marketing')) {
-    res.features.push('SEO & Marketing');
+  if (lower.includes('seo') || lower.includes('ranking') || lower.includes('speed') || lower.includes('marketing')) {
+    if (!res.features.includes('SEO & Speed Optimization')) res.features.push('SEO & Speed Optimization');
   }
-  if (lower.includes('admin') || lower.includes('panel')) {
-    res.features.push('Admin Dashboard');
+  if (lower.includes('admin') || lower.includes('dashboard') || lower.includes('panel')) {
+    if (!res.features.includes('Admin Management Panel')) res.features.push('Admin Management Panel');
+  }
+  if (lower.includes('funnel') || lower.includes('landing page')) {
+    if (!res.features.includes('Sales Funnel')) res.features.push('Sales Funnel');
+  }
+  if (lower.includes('zapier') || lower.includes('make') || lower.includes('n8n') || lower.includes('webhook')) {
+    if (!res.features.includes('Workflow Automations')) res.features.push('Workflow Automations');
   }
 
   const bM = text.match(/(?:budget|pese|cost|range)\s*(?:hai|is|:)?\s*([0-9kK$,]+(?:\s*(?:rs|pkr|usd|\$|dollars|thousand|lakh))?)/i) ||
@@ -106,59 +123,13 @@ function extractRequirement(text) {
   return res;
 }
 
-// Check if user is confirming or agreeing to a call/booking
-function checkBookingConfirmation(message, lastAgentTurn = '') {
-  const lowerMsg = (message || '').toLowerCase().trim();
-  const lowerAgent = (lastAgentTurn || '').toLowerCase().trim();
-
-  // If user explicitly asks to book/schedule or confirms time
-  const explicitPhrases = [
-    'confirm', 'book', 'theek hai', 'thik hai', 'done', 'sure', 'kal', 'tomorrow', 'parso',
-    'kar do', 'kardo', 'kr do', 'krdo', 'kar dein', 'kardein', 'kr dein', 'krdein',
-    'call kar', 'demo kar', 'yes please', 'bilkul', 'zaroor', 'inshaallah', 'inshallah',
-    'schedule', 'appointment', 'baje'
-  ];
-
-  const hasExplicitPhrase = explicitPhrases.some(p => lowerMsg.includes(p));
-
-  if (hasExplicitPhrase) {
-    const isOnlyRequirement = lowerMsg.includes('chahiye') && (lowerMsg.includes('store') || lowerMsg.includes('website') || lowerMsg.includes('ecommerce') || lowerMsg.includes('crm')) && !lowerMsg.includes('call') && !lowerMsg.includes('schedule') && !lowerMsg.includes('krdein');
-    if (!isOnlyRequirement) {
-      return true;
-    }
-  }
-
-  // If previous agent message asked to schedule / call / consultation
-  const agentAskedToSchedule = lowerAgent.includes('schedule') ||
-                               lowerAgent.includes('consultation') ||
-                               lowerAgent.includes('book') ||
-                               lowerAgent.includes('call kar dein') ||
-                               lowerAgent.includes('call kar do') ||
-                               lowerAgent.includes('appointment');
-
-  if (agentAskedToSchedule) {
-    const affirmativeTokens = [
-      'yes', 'yeah', 'yup', 'haan', 'han', 'g', 'ji', 'jee', 'ok', 'okay',
-      'sure', 'done', 'krdo', 'krdein', 'kardo', 'kardein', 'karlo', 'krlo',
-      'theek', 'thik', 'sahi', 'great', 'fine', 'perfect', 'good', 'call'
-    ];
-
-    const words = lowerMsg.split(/[\s,!.?]+/);
-    if (words.some(w => affirmativeTokens.includes(w))) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// Check if current message is describing a project requirement
+// Check if current message is describing a project requirement or service
 function isRequirementInput(msg) {
   const lower = (msg || '').toLowerCase();
   const keywords = [
-    'website', 'store', 'crm', 'cms', 'ecommerce', 'e-commerce', 'payment', 'gateway',
+    'website', 'wesite', 'build', 'store', 'crm', 'cms', 'ecommerce', 'e-commerce', 'payment', 'gateway',
     'app', 'chahiye', 'banani', 'banwana', 'bana dein', 'redesign', 'seo', 'features',
-    'portal', 'dashboard', 'landing page', 'portfolio', 'online shop'
+    'portal', 'dashboard', 'landing page', 'portfolio', 'online shop', 'ghl', 'wordpress', 'shopify'
   ];
   return keywords.some(k => lower.includes(k));
 }
@@ -201,33 +172,43 @@ export async function POST(request) {
     const currentPhone = extractPhone(message);
     const currentEmail = extractEmail(message);
     const currentName = extractName(message, lastAgentTurn);
-    const contactNewlyProvided = !!(currentPhone || currentEmail || (currentName && !extractName(priorUserTexts.join(' '))));
 
-    // Check existing lead in DB
-    const existingLead = leads.find(l =>
-      (detectedEmail && l.customerEmail === detectedEmail) ||
-      (detectedPhone && l.customerPhone === detectedPhone)
+    // Check if booking was ALREADY confirmed in THIS current conversation session
+    const bookingConfirmedInThisSession = (conversationHistory || []).some(h =>
+      (h.role === 'agent' || h.role === 'model') &&
+      (h.text || '').includes('🎉 Zabardast') &&
+      (h.text || '').includes('confirm ho chuki')
     );
-    const isBookedAlready = existingLead?.status === 'Booked';
 
-    // 3. Detect Booking Confirmation intent
-    const hasContact = !!(detectedPhone || detectedEmail);
-    const hasName = !!detectedName;
-    let detectedBookingConfirmed = checkBookingConfirmation(message, lastAgentTurn);
+    // Check if the agent just presented the review checklist to verify
+    const agentAskedForVerification = lastAgentTurn.includes('verify') ||
+                                     lastAgentTurn.includes('theek hain aur main') ||
+                                     lastAgentTurn.includes('Final submission se pehle') ||
+                                     lastAgentTurn.includes('email send kar doon');
 
-    if (detectedBookingConfirmed && hasContact) {
-      detectedBookingConfirmed = true;
-    }
+    // Customer confirms the review checklist (Step 4)
+    const isConfirmingReview = agentAskedForVerification && (
+      lowerMessage.includes('haan') ||
+      lowerMessage.includes('yes') ||
+      lowerMessage.includes('theek') ||
+      lowerMessage.includes('thik') ||
+      lowerMessage.includes('g') ||
+      lowerMessage.includes('ji') ||
+      lowerMessage.includes('jee') ||
+      lowerMessage.includes('done') ||
+      lowerMessage.includes('sahi') ||
+      lowerMessage.includes('send') ||
+      lowerMessage.includes('confirm') ||
+      lowerMessage.includes('krdo') ||
+      lowerMessage.includes('kardo') ||
+      lowerMessage.includes('kardein') ||
+      lowerMessage.includes('krdein') ||
+      lowerMessage.includes('ok') ||
+      lowerMessage.includes('sure') ||
+      lowerMessage.includes('bilkul')
+    );
 
-    // Check if user is asking about email / why email wasn't taken
-    const isAskingAboutEmail = lowerMessage.includes('email') ||
-                               lowerMessage.includes('mail') ||
-                               lowerMessage.includes('knsi') ||
-                               lowerMessage.includes('konsi') ||
-                               lowerMessage.includes('kahan bheja');
-
-    // 4. State checks
-    const hasRequirement = !!(reqDetails.category || reqDetails.features.length > 0 || reqDetails.budget);
+    let detectedBookingConfirmed = false;
 
     // Knowledge base matching
     const kbText = (agent.knowledgeBase || [])
@@ -241,26 +222,25 @@ export async function POST(request) {
     if (apiKey) {
       try {
         const systemPrompt = `
-You are "${agent.name}", a professional sales representative and booking consultant for "${agent.serviceName}".
-Persona: Consultative, warm, natural speaking voice, strictly concise.
-Interaction Channel: ${channelName} (${isText ? 'Live Text Messaging' : 'Live Voice Call'}).
+You are "${agent.name}", an expert consultant and booking representative for "${agent.serviceName}".
+Persona: High-tech, consultative, friendly, strictly concise.
 
 CURRENT COLLECTED STATE:
-- Customer Name: ${detectedName || 'Not collected yet'}
-- Customer Phone: ${detectedPhone || 'Not collected yet'}
-- Customer Email: ${detectedEmail || 'Not collected yet'}
-- Service Requirement: ${reqDetails.category || 'Not specified yet'}
-- Booking Status: ${isBookedAlready || detectedBookingConfirmed ? 'Booked' : 'Pending'}
+- Customer Name: ${detectedName || 'Not collected'}
+- Customer Phone: ${detectedPhone || 'Not collected'}
+- Customer Email: ${detectedEmail || 'Not collected'}
+- Service Requirement: ${reqDetails.category || 'Not specified'}
+- Additional Details: ${reqDetails.features.join(', ') || 'Standard build'}
 
-CRITICAL RULES:
-1. If Customer Name is already collected, NEVER ask for their name again.
-2. If Customer Phone is already collected, NEVER ask for phone number again.
-3. If Customer Email is NOT yet collected and user confirms booking or asks about email, politely ask for their email address to dispatch the written summary.
-4. If Customer just gave their email, confirm it warmly ("Shukriya! Aapka email save kar liya hai.").
-5. Keep response strictly under 2 sentences in natural Roman Urdu or English.
+CRITICAL 4-STEP PROTOCOL:
+1. If customer asks or provides service requirement, confirm it and ask for any additional details/features (e.g. payment gateway, pages, admin panel).
+2. Collect Name, Phone, and Email address.
+3. ONCE ALL INFO (Name, Phone, Email, Service) IS COLLECTED: Present a structured review summary to the user asking:
+   "Final submission se pehle kindly details verify kar lein: [Service, Name, Phone, Email]. Kya ye details theek hain aur main appointment confirm kar ke email send kar doon?"
+4. ONCE USER CONFIRMS REVIEW: Confirm enthusiastically and dispatch email.
 
 KNOWLEDGE BASE:
-${kbText || 'Professional bespoke services tailored to client requirements.'}
+${kbText || 'High-performance digital agency and automation services.'}
 `;
 
         const ai = new GoogleGenAI({ apiKey });
@@ -294,115 +274,78 @@ ${kbText || 'Professional bespoke services tailored to client requirements.'}
 
         if (response && response.text) {
           aiResponseText = response.text.trim();
-
-          const respLower = aiResponseText.toLowerCase();
-          if (hasContact && (respLower.includes('naam jaan') || respLower.includes('contact number') || respLower.includes('shubh naam') || respLower.includes('phone number kya'))) {
-            aiResponseText = '';
-          }
         }
       } catch (geminiErr) {
         console.warn('Gemini API call failed, using stateful dialogue manager:', geminiErr.message);
       }
     }
 
-    // --- HIGH-FIDELITY STATEFUL DIALOGUE MANAGER ---
+    // --- HIGH-FIDELITY STATEFUL DIALOGUE MANAGER (GUARANTEES PERFECT 4-STEP VERIFICATION & SUBMISSION) ---
     if (!aiResponseText) {
       const nameGreeting = detectedName ? ` ${detectedName}` : '';
-      const serviceDisplay = reqDetails.category || agent.serviceName || 'website development';
+      const serviceDisplay = reqDetails.category || agent.serviceName || 'Website Build & Development';
+      const featuresDisplay = reqDetails.features.length > 0
+        ? reqDetails.features.join(', ')
+        : (reqDetails.rawText ? 'Standard Custom Build' : 'Standard Full-Stack Setup');
 
-      // SCENARIO 0: User just provided their Email Address
-      if (currentEmail) {
-        aiResponseText = `Bohat shukriya${nameGreeting}! Aapka email address (${currentEmail}) maine save kar liya hai aur complete consultation details wahan dispatch kar di gayi hain.`;
+      // STEP 4: Customer confirms the final review checklist -> Lock Booking & Dispatch Email!
+      if (isConfirmingReview && detectedPhone && detectedEmail) {
+        aiResponseText = `🎉 Zabardast${nameGreeting}! Aapki appointment aur service details confirm ho chuki hain. Complete verification summary aapke email (${detectedEmail}) par dispatch kar di gayi hai aur hamari team jald aapke number (${detectedPhone}) par rabta karegi!`;
+        detectedBookingConfirmed = true;
       }
-      // SCENARIO 0.5: User asks about Email ("knsi email pe bhja hei email toh li nh", "email knsi hai")
-      else if (isAskingAboutEmail) {
-        if (detectedEmail) {
-          aiResponseText = `Humne aapke provided email (${detectedEmail}) par details send kar di hain. Agar aap koi aur email update karwana chahte hain to share kar dein.`;
-        } else {
-          aiResponseText = `Aapka bilkul theek kehna hai! Maine abhi aapka email address note nahi kiya tha. Kindly apna email address share kar dein taake main details foran wahan bhej sakoon.`;
-        }
-      }
-      // SCENARIO 1: Booking Confirmed by User in this turn
-      else if (detectedBookingConfirmed && hasContact) {
-        const timeNote = reqDetails.timeline || 'kal ke liye';
-        if (detectedEmail) {
-          aiResponseText = `🎉 Zabardast${nameGreeting}! Aapki consultation call ${timeNote} confirm ho chuki hai. Complete booking details aapke email (${detectedEmail}) par dispatch kar di gayi hain aur hamari team aapke number (${detectedPhone}) par rabta karegi!`;
-        } else {
-          aiResponseText = `🎉 Zabardast${nameGreeting}! Aapki consultation call ${timeNote} confirm ho chuki hai. Hamari team aapke number (${detectedPhone}) par rabta karegi. Meeting link aur written summary receive karne ke liye aapka email address kya hai?`;
-        }
-      }
-      // SCENARIO 1.5: Booking is ALREADY confirmed in prior turn
-      else if (isBookedAlready) {
-        if (!detectedEmail) {
-          aiResponseText = `Aapki consultation booking already confirm ho chuki hai. Hamari team aapke number (${detectedPhone}) par rabta karegi. Written summary aur meeting link ke liye kindly apna email address share kar dein!`;
-        } else {
-          aiResponseText = `Aapki appointment already confirm ho chuki hai aur details ${detectedEmail} par dispatched hain. Agar aapka koi aur sawal hai to zaroor batayein!`;
-        }
-      }
-      // SCENARIO 2: Contact info was just provided in this turn (Name and/or Phone)
-      else if (contactNewlyProvided && hasContact) {
-        const contactSavedMsg = detectedPhone
-          ? `Aapka contact number (${detectedPhone}) maine note aur save kar liya hai.`
-          : `Aapka email (${detectedEmail}) maine note aur save kar liya hai.`;
 
-        if (hasRequirement) {
-          aiResponseText = `Bohat shukriya${nameGreeting}! ${contactSavedMsg} Aapko ${serviceDisplay} ke liye kya specific features chahiye? (Jaise e-commerce store, payment gateway, ya portfolio?)`;
+      // STEP 3: All Details (Name, Phone, Email, Service) are Complete -> Present Final Review Summary!
+      else if (detectedName && detectedPhone && detectedEmail && !bookingConfirmedInThisSession) {
+        aiResponseText = `Bohat shukriya${nameGreeting}! Final submission se pehle kindly details verify kar lein:
+
+📌 Service: ${serviceDisplay}
+⚙️ Additional Details: ${featuresDisplay}
+👤 Name: ${detectedName}
+📞 Phone: ${detectedPhone}
+✉️ Email: ${detectedEmail}
+
+Kya ye sab details theek hain aur main appointment confirm kar ke email send kar doon?`;
+      }
+
+      // If user has already booked in this session and continues chatting
+      else if (bookingConfirmedInThisSession) {
+        if (lowerMessage.includes('email') || lowerMessage.includes('mail')) {
+          aiResponseText = `Aapki booking confirmation already ${detectedEmail || 'aapke email'} par send ho chuki hai. Agar koi aur email update karwana ho to zaroor batayein!`;
         } else {
-          aiResponseText = `Bohat shukriya${nameGreeting}! ${contactSavedMsg} Aapki project requirement kya hai taake hum aapko best quotation aur solution guide kar sakein?`;
+          aiResponseText = `Aapki booking successfully confirmed hai aur details dispatch hain. Agar aapka koi aur technical question ho to zaroor batayein!`;
         }
       }
-      // SCENARIO 3: User answers Service Requirement in THIS message (Contact is ALREADY saved)
-      else if (hasContact && !detectedBookingConfirmed && isRequirementInput(lowerMessage)) {
-        const kbMatch = (agent.knowledgeBase || []).find(k =>
-          lowerMessage.includes((k.topic || '').toLowerCase()) || (k.content || '').toLowerCase().includes('package')
-        );
-        const solutionText = kbMatch ? kbMatch.content : `Hum custom ${serviceDisplay} responsive design, fast performance aur dedicated support ke sath deliver karte hain.`;
-        aiResponseText = `Behtareen! ${solutionText} Aapka contact number already hamare paas saved hai. Kya hum aapke liye kal ek quick consultation call schedule kar dein?`;
+
+      // STEP 2B: Name and Phone are present, but Email is still missing
+      else if (detectedName && detectedPhone && !detectedEmail) {
+        aiResponseText = `Bohat shukriya${nameGreeting}! Aapka contact number (${detectedPhone}) maine note kar liya hai. Final submission review aur meeting confirmation receive karne ke liye aapka email address kya hai?`;
       }
-      // SCENARIO 4: Pricing & Cost Questions
+
+      // STEP 2A: Phone is present, but Name is missing
+      else if (detectedPhone && !detectedName) {
+        aiResponseText = `Aapka contact number (${detectedPhone}) maine note kar liya hai. Final verification ke liye aapka naam aur email address kya hai?`;
+      }
+
+      // STEP 1: User mentions Service / Requirements (Contact details not yet complete)
+      else if (isRequirementInput(lowerMessage) || reqDetails.category) {
+        aiResponseText = `Ji zaroor! Hum ${serviceDisplay} provide karte hain. Isme aapko koi additional features ya specific requirements (jaise payment gateway, admin portal, e-commerce, ya timeline) add karwani hain? Aur aapka naam, contact number aur email address kya hai taake main complete quotation note kar sakoon?`;
+      }
+
+      // Pricing & Packages Questions
       else if (lowerMessage.match(/\b(price|cost|package|rate|charges|kitne|pese|how much)\b/)) {
         const priceKb = (agent.knowledgeBase || []).find(k =>
           (k.topic || '').toLowerCase().includes('price') || (k.content || '').toLowerCase().includes('$') || (k.content || '').toLowerCase().includes('package')
         );
-        const pText = priceKb ? priceKb.content : `Hamara starter package 999 dollar se shuru hota hai jisme complete custom design aur setup included hai.`;
+        const pText = priceKb ? priceKb.content : `Starter packages $499 se shuru hote hain aur full-stack builds $999 se.`;
+        aiResponseText = `${pText} Aapko complete proposal aur quotation share karne ke liye, aapka naam, phone number aur email address kya hai?`;
+      }
 
-        if (!hasContact) {
-          aiResponseText = `${pText} Aapko complete quotation aur tailored breakdown share karne ke liye, aapka naam aur WhatsApp number kya hai?`;
-        } else {
-          aiResponseText = `${pText} Aapka contact already hamare paas saved hai. Kya main aapke liye demo session book kar doon?`;
-        }
-      }
-      // SCENARIO 5: What services / Questions about capabilities
-      else if (lowerMessage.match(/\b(service|services|offer|what do you do|kya karte ho|kaam|detail)\b/)) {
-        const serviceKb = (agent.knowledgeBase || []).find(k => (k.topic || '').toLowerCase().includes('service'));
-        const sText = serviceKb ? serviceKb.content : `Hum custom web development, CRM systems aur AI solutions provide karte hain.`;
-
-        if (!hasContact) {
-          aiResponseText = `${sText} Aapka naam aur contact number kya hai taake main portfolio aur quotation bhej sakoon?`;
-        } else {
-          aiResponseText = `${sText} Aapko isme se kis type ka solution apne project ke liye chahiye?`;
-        }
-      }
-      // SCENARIO 6: Greetings (Salam, Hello, Hi)
-      else if (lowerMessage.match(/\b(hi|hello|hey|salam|assalam|kese ho|kaise ho|hal chal)\b/)) {
-        if (!hasContact) {
-          if (lowerMessage.match(/\b(salam|assalam|kese|kaise)\b/)) {
-            aiResponseText = `Walaikum Assalam! Main ${agent.name} hoon ${agent.serviceName} se. Main aapki kya madad kar sakta hoon? Aur kya main aapka naam jaan sakta hoon?`;
-          } else {
-            aiResponseText = `Hello! I am ${agent.name} with ${agent.serviceName}. How can I assist you today? May I have your name?`;
-          }
-        } else {
-          aiResponseText = `Walaikum Assalam${nameGreeting}! Aapka contact already note hai. Aapki requirement ke mutabiq main aapki mazeed kya madad karoon?`;
-        }
-      }
-      // SCENARIO 7: General / Fallback
+      // Greetings / General Fallback
       else {
-        if (!hasContact) {
-          aiResponseText = `Ji zaroor! Hum ${agent.serviceName} provide karte hain. Aapka naam aur contact/WhatsApp number kya hai taake main details note kar sakoon?`;
-        } else if (!hasRequirement) {
-          aiResponseText = `Aapki specific project requirement kya hai taake main aapko exact quotation aur timeline guide kar sakoon?`;
+        if (lowerMessage.match(/\b(hi|hello|hey|salam|assalam|kese ho|kaise ho)\b/)) {
+          aiResponseText = `Walaikum Assalam! Main ${agent.name} hoon ${agent.serviceName} se. Main aapki kya madad kar sakta hoon? Aapke project ki kya requirement hai?`;
         } else {
-          aiResponseText = `Aapka project requirement aur contact number already saved hai. Kya main aapke liye consultation demo schedule kar doon?`;
+          aiResponseText = `Ji zaroor! Hum ${agent.serviceName} provide karte hain. Aapka naam, contact number aur email address kya hai taake main complete quotation share kar sakoon?`;
         }
       }
     }
@@ -414,18 +357,22 @@ ${kbText || 'Professional bespoke services tailored to client requirements.'}
     let autoEmailSent = false;
     let savedLeadId = null;
 
-    if (hasContact) {
+    if (detectedPhone || detectedEmail) {
       try {
         const fullTranscript = [...(conversationHistory || [])];
         fullTranscript.push({ role: 'customer', text: message, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
         fullTranscript.push({ role: 'agent', text: cleanResponseText, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
         const leadSourceTag = isText ? 'Text Chat' : 'Voice Agent';
-        const currentNotes = reqDetails.features.length > 0
-          ? `Features: ${reqDetails.features.join(', ')}. Budget: ${reqDetails.budget || 'Flexible'}. Timeline: ${reqDetails.timeline || 'Standard'}.`
-          : (reqDetails.category || agent.serviceName);
+        const currentFeatures = reqDetails.features.length > 0 ? reqDetails.features.join(', ') : 'Standard Build';
+        const currentNotes = `Service: ${reqDetails.category || agent.serviceName}. Additional Details: ${currentFeatures}. Budget: ${reqDetails.budget || 'Flexible'}. Timeline: ${reqDetails.timeline || 'Standard'}.`;
 
-        const currentLeadStatus = (detectedBookingConfirmed || isBookedAlready) ? 'Booked' : 'Contact Acquired';
+        const existingLead = leads.find(l =>
+          (detectedEmail && l.customerEmail === detectedEmail) ||
+          (detectedPhone && l.customerPhone === detectedPhone)
+        );
+
+        const currentLeadStatus = detectedBookingConfirmed ? 'Booked' : (bookingConfirmedInThisSession ? 'Booked' : 'Contact Acquired');
 
         const leadPayload = {
           id: existingLead ? existingLead.id : 'lead_' + Date.now(),
@@ -442,20 +389,15 @@ ${kbText || 'Professional bespoke services tailored to client requirements.'}
           leadSource: leadSourceTag,
           channel: isText ? 'Text Message' : 'Voice Call',
           status: currentLeadStatus,
-          summary: `${currentLeadStatus}: ${detectedName || 'Customer'} regarding ${reqDetails.category || agent.serviceName} (via ${leadSourceTag}).`,
+          summary: `${currentLeadStatus}: ${detectedName || 'Customer'} regarding ${reqDetails.category || agent.serviceName} (${currentFeatures}) via ${leadSourceTag}.`,
           transcript: fullTranscript,
           emailSent: existingLead?.emailSent || false,
           emailSentTo: existingLead?.emailSentTo || '',
           createdAt: existingLead?.createdAt || new Date().toISOString()
         };
 
-        // If email is available and booking is confirmed (or email newly provided on a booked lead), send email!
-        const shouldSendEmail = (detectedBookingConfirmed || isBookedAlready) &&
-                                detectedEmail &&
-                                detectedEmail.includes('@') &&
-                                (!existingLead?.emailSent || currentEmail);
-
-        if (shouldSendEmail) {
+        // If booking was verified and confirmed in THIS turn, send email!
+        if (detectedBookingConfirmed && detectedEmail && detectedEmail.includes('@')) {
           const transporter = getEmailTransporter(settings);
           if (transporter) {
             const recipients = new Set();
@@ -495,14 +437,15 @@ ${kbText || 'Professional bespoke services tailored to client requirements.'}
     return NextResponse.json({
       success: true,
       response: cleanResponseText,
-      bookingConfirmed: detectedBookingConfirmed || isBookedAlready,
+      bookingConfirmed: detectedBookingConfirmed || bookingConfirmedInThisSession,
       emailSent: autoEmailSent,
       leadId: savedLeadId,
       detectedInfo: {
         name: detectedName,
         email: detectedEmail,
         phone: detectedPhone,
-        requirement: reqDetails.category
+        requirement: reqDetails.category,
+        features: reqDetails.features
       }
     });
   } catch (error) {
