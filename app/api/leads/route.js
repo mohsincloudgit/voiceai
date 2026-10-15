@@ -4,18 +4,39 @@ import { getAgents, getLeads, saveLead, getSettings } from '@/lib/db';
 import { getEmailTransporter, generateLeadEmailHtml } from '@/lib/email';
 import { getUserFromRequest } from '@/lib/auth';
 
+const OWNER_PRIVATE_AGENT_IDS = [
+  'agent_digital_agency',
+  'agent_real_estate',
+  'agent_solar_energy',
+  'agent_1791463825030'
+];
+
 export async function GET(request) {
   try {
     const leads = await getLeads();
     const user = getUserFromRequest(request);
 
-    if (user && user.role !== 'admin') {
-      const allowedAgents = user.assignedAgents || ['agent_ai_automation_ghl'];
-      const filtered = leads.filter(l => allowedAgents.includes(l.agentId));
+    // 1. Super Admin: Sees ALL leads (personal leads + test leads)
+    if (user && user.role === 'superadmin') {
+      return NextResponse.json({ success: true, leads });
+    }
+
+    // 2. Demo Admin: Owner's private leads are completely hidden.
+    // Only sees leads for Zayn (agent_ai_automation_ghl) or test agents.
+    if (user && (user.role === 'demo_admin' || user.role === 'admin')) {
+      const filtered = leads.filter(l => !OWNER_PRIVATE_AGENT_IDS.includes(l.agentId));
       return NextResponse.json({ success: true, leads: filtered });
     }
 
-    return NextResponse.json({ success: true, leads });
+    // 3. Client User: Only sees leads for recent agent (Zayn)
+    if (user && user.role === 'user') {
+      const filtered = leads.filter(l => l.agentId === 'agent_ai_automation_ghl');
+      return NextResponse.json({ success: true, leads: filtered });
+    }
+
+    // Default unauthenticated / public
+    const fallback = leads.filter(l => !OWNER_PRIVATE_AGENT_IDS.includes(l.agentId));
+    return NextResponse.json({ success: true, leads: fallback });
   } catch (err) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

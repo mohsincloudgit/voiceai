@@ -1,29 +1,29 @@
 [
   {
-    "id": "user_admin",
-    "name": "Mohsin (Main Admin)",
-    "email": "admin@voiceai.com",
-    "password": "4614afd8f128a5b10e2255bfa6d989b3196dbb2fb24bac6880fd3da7b83e10cc",
-    "role": "admin",
-    "createdAt": "2026-10-14T23:39:51.656Z"
-  },
-  {
-    "id": "user_mohsin",
-    "name": "Muhammad Mohsin",
+    "id": "user_superadmin",
+    "name": "Muhammad Mohsin (Super Admin)",
     "email": "muhammadmohsinghl@gmail.com",
     "password": "4614afd8f128a5b10e2255bfa6d989b3196dbb2fb24bac6880fd3da7b83e10cc",
-    "role": "admin",
-    "createdAt": "2026-10-14T23:39:51.656Z"
+    "role": "superadmin",
+    "createdAt": "2026-10-15T00:00:00.000Z"
+  },
+  {
+    "id": "user_demo_admin",
+    "name": "Demo Admin (Testing)",
+    "email": "admin@voiceai.com",
+    "password": "4614afd8f128a5b10e2255bfa6d989b3196dbb2fb24bac6880fd3da7b83e10cc",
+    "role": "demo_admin",
+    "createdAt": "2026-10-15T00:00:00.000Z"
   },
   {
     "id": "user_client",
-    "name": "Client User (Zayn Agent)",
+    "name": "Client User (Viewer)",
     "email": "client@voiceai.com",
     "password": "d29bb08159b29e5e15da5e36503e4a2d6d87fb7efb647156540aff88e4e95d1a",
     "role": "user",
     "assignedAgents": [
       "agent_ai_automation_ghl"
     ],
-    "createdAt": "2026-10-14T23:39:51.656Z"
+    "createdAt": "2026-10-15T00:00:00.000Z"
   }
 ]

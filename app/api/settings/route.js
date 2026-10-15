@@ -2,28 +2,41 @@ import { NextResponse } from 'next/server';
 import { getSettings, saveSettings, getDatabaseStatus } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request) {
+  const user = getUserFromRequest(request);
+  const dbStatus = getDatabaseStatus();
+
+  // Only Super Admin can view SMTP & API credentials
+  if (!user || user.role !== 'superadmin') {
+    return NextResponse.json({
+      success: true,
+      settings: {
+        dbStatus,
+        isSmtpConfigured: false,
+        isGeminiConfigured: false
+      }
+    });
+  }
+
   const currentSettings = await getSettings();
   const host = currentSettings.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = currentSettings.smtpPort || parseInt(process.env.SMTP_PORT || '587', 10);
   const secure = currentSettings.smtpSecure !== undefined ? currentSettings.smtpSecure : (process.env.SMTP_SECURE === 'true');
-  const user = currentSettings.smtpUser || process.env.SMTP_USER || '';
-  const pass = currentSettings.smtpPass || process.env.SMTP_PASS || '';
+  const smtpUser = currentSettings.smtpUser || process.env.SMTP_USER || '';
+  const smtpPass = currentSettings.smtpPass || process.env.SMTP_PASS || '';
   const notifEmail = currentSettings.notificationEmail || process.env.NOTIFICATION_EMAIL || '';
   const geminiKey = currentSettings.geminiApiKey || process.env.GEMINI_API_KEY || '';
-
-  const dbStatus = getDatabaseStatus();
 
   const safeSettings = {
     ...currentSettings,
     smtpHost: host,
     smtpPort: port,
     smtpSecure: secure,
-    smtpUser: user,
-    smtpPass: pass ? '••••••••' : '',
+    smtpUser: smtpUser,
+    smtpPass: smtpPass ? '••••••••' : '',
     notificationEmail: notifEmail,
     geminiApiKey: geminiKey ? `${geminiKey.slice(0, 6)}...` : '',
-    isSmtpConfigured: !!(user && pass),
+    isSmtpConfigured: !!(smtpUser && smtpPass),
     isGeminiConfigured: !!geminiKey,
     dbStatus
   };
@@ -33,9 +46,10 @@ export async function GET() {
 export async function POST(request) {
   try {
     const user = getUserFromRequest(request);
-    if (user && user.role !== 'admin') {
+    // Strictly ONLY Super Admin can update settings
+    if (!user || user.role !== 'superadmin') {
       return NextResponse.json(
-        { success: false, error: 'Permission denied: Only Admin can update settings' },
+        { success: false, error: 'Permission denied: Only Super Main Admin can update system settings' },
         { status: 403 }
       );
     }

@@ -20,14 +20,25 @@ export async function GET(request, context) {
 export async function DELETE(request, context) {
   try {
     const user = getUserFromRequest(request);
-    if (user && user.role !== 'admin') {
+    const { id } = await context.params;
+
+    // Block client users
+    if (user && user.role === 'user') {
       return NextResponse.json(
-        { success: false, error: 'Permission denied: Only Admin can delete agents' },
+        { success: false, error: 'Permission denied: Client accounts cannot delete agents' },
         { status: 403 }
       );
     }
 
-    const { id } = await context.params;
+    // Protect reference agent and owner agents from demo_admin deletion
+    const protectedIds = ['agent_ai_automation_ghl', 'agent_digital_agency', 'agent_real_estate', 'agent_solar_energy', 'agent_1791463825030'];
+    if (user && user.role !== 'superadmin' && protectedIds.includes(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: Core reference agents cannot be deleted' },
+        { status: 403 }
+      );
+    }
+
     await deleteAgent(id);
     return NextResponse.json({ success: true, message: 'Agent deleted' });
   } catch (error) {

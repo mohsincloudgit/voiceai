@@ -92,7 +92,7 @@ export default function Dashboard() {
   const loadDashboardData = (user) => {
     fetchAgents(user);
     fetchLeads();
-    if (user?.role === 'admin') {
+    if (user?.role === 'superadmin') {
       fetchSettings();
     }
   };
@@ -104,8 +104,8 @@ export default function Dashboard() {
       if (data.success) {
         setAgents(data.agents || []);
         if (data.agents?.length > 0 && !selectedEmbedAgent) {
-          // If non-admin, pick assigned agent
-          const defaultAgent = (user && user.role !== 'admin')
+          // If non-superadmin, default to Zayn reference agent
+          const defaultAgent = (user && user.role !== 'superadmin')
             ? (data.agents.find(a => a.id === 'agent_ai_automation_ghl') || data.agents[0])
             : data.agents[0];
           setSelectedEmbedAgent(defaultAgent?.id || '');
@@ -194,17 +194,26 @@ export default function Dashboard() {
     }
   };
 
-  // RBAC Computations
-  const isAdmin = currentUser?.role === 'admin';
+  // RBAC Computations:
+  // 1. Super Admin (Owner - Muhammad Mohsin): Full access, sees all personal agents, leads, SMTP config
+  // 2. Demo Admin (Testing Admin): Can create/edit test agents, sees Zayn reference agent, SMTP hidden, owner private data hidden
+  // 3. Client / User: View-only access to Zayn reference agent, no create/edit/delete, SMTP hidden
+  const isSuperAdmin = currentUser?.role === 'superadmin';
+  const isDemoAdmin = currentUser?.role === 'demo_admin';
+  const isAdmin = isSuperAdmin || isDemoAdmin;
+  const isClient = !isAdmin;
+  const hasSmtpAccess = isSuperAdmin;
 
   // Visible agents according to user role:
-  // Admin sees all agents; Client only sees recent agent (agent_ai_automation_ghl)
-  const visibleAgents = isAdmin
+  // Super Admin sees all agents; Demo Admin sees Zayn + created test agents; Client only sees Zayn
+  const visibleAgents = isSuperAdmin
     ? agents
-    : agents.filter(a => a.id === 'agent_ai_automation_ghl' || (currentUser?.assignedAgents && currentUser.assignedAgents.includes(a.id)));
+    : isDemoAdmin
+      ? agents
+      : agents.filter(a => a.id === 'agent_ai_automation_ghl' || (currentUser?.assignedAgents && currentUser.assignedAgents.includes(a.id)));
 
   // Visible leads according to role
-  const visibleLeads = isAdmin
+  const visibleLeads = (isSuperAdmin || isDemoAdmin)
     ? leads
     : leads.filter(l => l.agentId === 'agent_ai_automation_ghl' || (currentUser?.assignedAgents && currentUser.assignedAgents.includes(l.agentId)));
 
@@ -307,7 +316,11 @@ export default function Dashboard() {
 
   const handleDeleteAgent = async (id) => {
     if (!isAdmin) {
-      alert('Access Denied: Only Admin can delete agents');
+      alert('Access Denied: Only Admins can delete agents');
+      return;
+    }
+    if (id === 'agent_ai_automation_ghl' && !isSuperAdmin) {
+      alert('Access Denied: The reference agent (Zayn) is protected and cannot be deleted.');
       return;
     }
     if (!confirm('Are you sure you want to delete this agent?')) return;
@@ -399,10 +412,10 @@ export default function Dashboard() {
     }
   };
 
-  // Settings Handlers (Admin Only)
+  // Settings Handlers (Super Admin Only)
   const handleSaveSettings = async (e) => {
     e.preventDefault();
-    if (!isAdmin) return;
+    if (!hasSmtpAccess) return;
     setSettingsFeedback({ type: '', message: '' });
     try {
       const res = await fetch('/api/settings', {
@@ -422,7 +435,7 @@ export default function Dashboard() {
   };
 
   const handleTestSmtp = async () => {
-    if (!isAdmin) return;
+    if (!hasSmtpAccess) return;
     setTestEmailLoading(true);
     setSettingsFeedback({ type: '', message: '' });
     try {
@@ -543,7 +556,7 @@ export default function Dashboard() {
             {/* Quick Demo Credentials Autofill */}
             <div className="auth-demo-chips">
               <div className="auth-demo-label">
-                <span>⚡</span> 1-Click Fast Demo Login:
+                <span>⚡</span> 1-Click Fast Demo Login (Testing Purpose):
               </div>
               <div className="demo-chip-group">
                 <button
@@ -551,17 +564,20 @@ export default function Dashboard() {
                   onClick={() => handleFillDemo('admin')}
                   className="demo-chip-btn"
                 >
-                  <strong>👑 Main Admin</strong>
-                  <span>Full CRUD & All Agents</span>
+                  <strong>👑 Demo Admin</strong>
+                  <span>Test Mode • Full Agent Studio</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFillDemo('client')}
                   className="demo-chip-btn"
                 >
-                  <strong>👤 Client / User</strong>
+                  <strong>👤 Client User</strong>
                   <span>Recent Agent (View Only)</span>
                 </button>
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '11.5px', color: '#94a3b8', textAlign: 'center' }}>
+                🔒 <strong>Super Main Admin (Owner):</strong> Enter your private credentials directly in the form below.
               </div>
             </div>
 
@@ -681,8 +697,8 @@ export default function Dashboard() {
           </div>
           <div className="brand-text">
             <h2>Voice Agent CRM</h2>
-            <span style={{ color: isAdmin ? '#10b981' : '#38bdf8' }}>
-              {isAdmin ? 'Main Admin Portal' : 'Client Access Portal'}
+            <span style={{ color: isSuperAdmin ? '#f59e0b' : isDemoAdmin ? '#10b981' : '#38bdf8' }}>
+              {isSuperAdmin ? '👑 Super Admin (Owner)' : isDemoAdmin ? '⚡ Demo Admin (Test Portal)' : '👤 Client Access Portal'}
             </span>
           </div>
         </div>
@@ -745,8 +761,8 @@ export default function Dashboard() {
             <span>Iframe & Footer Embed</span>
           </a>
 
-          {/* Settings Tab: ONLY VISIBLE TO MAIN ADMIN */}
-          {isAdmin && (
+          {/* Settings Tab: ONLY VISIBLE TO SUPER ADMIN (OWNER) */}
+          {hasSmtpAccess && (
             <a
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveTab('settings')}
@@ -778,16 +794,16 @@ export default function Dashboard() {
         <header className="crm-header">
           <div className="crm-title">
             <h1>
-              {activeTab === 'overview' && (isAdmin ? 'Admin Overview Dashboard' : 'Client Overview Dashboard')}
+              {activeTab === 'overview' && (isSuperAdmin ? 'Master Overview Dashboard' : isDemoAdmin ? 'Demo Admin Overview' : 'Client Overview Dashboard')}
               {activeTab === 'agents' && (isAdmin ? 'Voice Agents & Knowledge Base Studio' : 'Assigned AI Agent (View Only)')}
-              {activeTab === 'leads' && (isAdmin ? 'All Leads & Full Transcripts' : 'Your Inquiries & Transcripts')}
+              {activeTab === 'leads' && (isSuperAdmin ? 'All Leads & Full Transcripts' : isDemoAdmin ? 'Demo Leads & Transcripts' : 'Your Inquiries & Transcripts')}
               {activeTab === 'embed' && 'Website Footer & Iframe Embed Generator'}
               {activeTab === 'settings' && 'Email Dispatcher & AI Settings'}
             </h1>
             <p>
-              {activeTab === 'overview' && (isAdmin ? 'Real-time performance, all agents, incoming inquiries, and conversion stats.' : 'Performance metrics and visitor conversations for your assigned AI agent.')}
-              {activeTab === 'agents' && (isAdmin ? 'Create custom agents tailored to each service with bespoke qualification rules.' : 'Your dedicated AI sales agent details. View-only access with interactive testing and embed code.')}
-              {activeTab === 'leads' && (isAdmin ? 'Inspect full customer voice and chat conversations across all agents.' : 'Inspect inquiries and transcripts captured by your AI agent.')}
+              {activeTab === 'overview' && (isSuperAdmin ? 'Real-time master view of all personal & system agents, leads, and conversion stats.' : isDemoAdmin ? 'Interactive testing dashboard. Test agents, create custom personas, and test widget calls.' : 'Performance metrics and visitor conversations for your assigned AI agent.')}
+              {activeTab === 'agents' && (isSuperAdmin ? 'Master control of all voice agents, knowledge bases, and custom prompt rules.' : isDemoAdmin ? 'Explore the reference agent or create new test agents. (Reference agent is protected).' : 'Your dedicated AI sales agent details. View-only access with interactive testing and embed code.')}
+              {activeTab === 'leads' && (isSuperAdmin ? 'Master leads registry across all agents and services.' : isDemoAdmin ? 'Leads captured by the reference agent or your custom test agents.' : 'Inspect inquiries and transcripts captured by your AI agent.')}
               {activeTab === 'embed' && 'Get 1-click embed code to add your voice agent to any client website footer.'}
               {activeTab === 'settings' && 'Configure SMTP credentials and Google Gemini intelligence.'}
             </p>
@@ -814,13 +830,15 @@ export default function Dashboard() {
 
             {/* User Profile & Role Info Bar */}
             <div className="user-profile-bar">
-              <div className="user-profile-avatar">
-                {currentUser?.name ? currentUser.name[0] : (isAdmin ? 'A' : 'C')}
+              <div className="user-profile-avatar" style={{
+                background: isSuperAdmin ? 'linear-gradient(135deg, #f59e0b, #ef4444)' : isDemoAdmin ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #0284c7, #06b6d4)'
+              }}>
+                {isSuperAdmin ? '👑' : isDemoAdmin ? '⚡' : '👤'}
               </div>
               <div className="user-profile-info">
                 <span className="user-profile-name">{currentUser?.name || currentUser?.email}</span>
-                <span className={`user-profile-role-badge ${isAdmin ? 'role-admin' : 'role-user'}`}>
-                  {isAdmin ? '👑 Main Admin (Full)' : '👤 Client (View Only)'}
+                <span className={`user-profile-role-badge ${isSuperAdmin ? 'role-superadmin' : isDemoAdmin ? 'role-admin' : 'role-user'}`}>
+                  {isSuperAdmin ? '👑 Super Admin (Owner)' : isDemoAdmin ? '⚡ Demo Admin (Test)' : '👤 Client (View Only)'}
                 </span>
               </div>
               <button onClick={handleLogout} className="btn-logout" title="Sign out">
@@ -1023,11 +1041,16 @@ export default function Dashboard() {
                     <div className="agent-card-meta">
                       <h3>{agent.name}</h3>
                       <span className="agent-service-badge">{agent.serviceName}</span>
-                      {!isAdmin && (
-                        <div style={{ marginTop: '6px' }}>
+                      <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {agent.id === 'agent_ai_automation_ghl' && (
+                          <span className="view-only-pill" style={{ background: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', borderColor: 'rgba(99, 102, 241, 0.4)' }}>
+                            ⭐ Reference Agent
+                          </span>
+                        )}
+                        {!isAdmin && (
                           <span className="view-only-pill">🔒 View-Only</span>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1058,9 +1081,11 @@ export default function Dashboard() {
                           </svg>
                           Test Voice
                         </a>
-                        <button onClick={() => handleDeleteAgent(agent.id)} className="btn btn-danger btn-sm" title="Delete">
-                          &times;
-                        </button>
+                        {(isSuperAdmin || agent.id !== 'agent_ai_automation_ghl') && (
+                          <button onClick={() => handleDeleteAgent(agent.id)} className="btn btn-danger btn-sm" title="Delete">
+                            &times;
+                          </button>
+                        )}
                       </>
                     ) : (
                       /* Client Actions: View Details & Test ONLY (No Edit, No Delete) */
@@ -1343,8 +1368,8 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* TAB 5: SETTINGS (ADMIN ONLY) */}
-        {activeTab === 'settings' && isAdmin && (
+        {/* TAB 5: SETTINGS (SUPER ADMIN ONLY) */}
+        {activeTab === 'settings' && hasSmtpAccess && (
           <section className="tab-content-section active">
             <div className="card-panel" style={{ maxWidth: '800px' }}>
               <div className="panel-header">
